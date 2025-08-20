@@ -1,0 +1,114 @@
+package main
+
+import (
+	"encoding/json"
+	"io"
+	"math"
+	"net/http"
+	"sync"
+	"time"
+)
+
+type ClientInfo struct {
+	IP         string
+	NodeID     string
+	Token      string
+	Region     string
+	Port       int
+	LastSeen   time.Time
+	AvgLatency time.Duration
+	Valid      bool
+	Mutex      sync.Mutex
+}
+
+var (
+	clients      = make(map[string]*ClientInfo) // key: IP + NodeID
+	clientsMutex sync.Mutex
+)
+
+// Generate client key
+func clientKey(ip, nodeID string) string {
+	return ip + ":" + nodeID
+}
+
+// Client heartbeat handler
+func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		IP     string `json:"ip"`
+		NodeID string `json:"node_id"`
+		Token  string `json:"token"`
+		Region string `json:"region"`
+		Port   int    `json:"port"`
+	}
+
+	body, _ := io.ReadAll(r.Body)
+	err := json.Unmarshal(body, &req)
+	if err != nil || req.IP == "" || req.NodeID == "" || req.Region == "" || req.Token == "" {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if !validToken(req.Token) {
+		http.Error(w, "unauthorized token", http.StatusUnauthorized)
+		return
+	}
+
+	if req.Port == 0 {
+		req.Port = 3000
+	}
+	key := clientKey(req.IP, req.NodeID)
+	clientsMutex.Lock()
+	client, exists := clients[key]
+	if !exists {
+		client = &ClientInfo{IP: req.IP, NodeID: req.NodeID, Token: req.Token, Region: req.Region, Port: req.Port, Valid: true}
+		clients[key] = client
+	} else {
+		client.Mutex.Lock()
+		client.Region, client.Token, client.Port, client.Valid = req.Region, req.Token, req.Port, true
+		client.Mutex.Unlock()
+	}
+	client.Mutex.Lock()
+	client.LastSeen = time.Now()
+	client.Mutex.Unlock()
+	clientsMutex.Unlock()
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("registered"))
+}
+
+func validToken(token string) bool {
+	if config == nil || len(config.Tokens) == 0 || token == "" {
+		return false
+	}
+	for _, t := range config.Tokens {
+		if t == token {
+			return true
+		}
+	}
+	return false
+}
+
+// Client selection (load balancing)
+func selectBestClient(candidates []*ClientInfo) *ClientInfo {
+	if len(candidates) == 0 {
+		return nil
+	}
+	best := candidates[0]
+	bestScore := math.MaxFloat64
+	for _, c := range candidates {
+		c.Mutex.Lock()
+		t := time.Since(c.LastSeen).Seconds()
+		lat := c.AvgLatency.Seconds()
+		score := t + lat
+		if score < bestScore {
+			best = c
+			bestScore = score
+		}
+		c.Mutex.Unlock()
+	}
+	return best
+}
