@@ -11,7 +11,7 @@ const http = require('http');
 const os = require('os');
 
 const SERVER_HOST = process.env.MLS_HOST || 'localhost';
-const SERVER_PORT = Number(process.env.MLS_PORT || 8000);
+const SERVER_PORT = Number(process.env.MLS_PORT || 8080);
 const TOKEN = process.env.MLS_TOKEN || 'supersecrettokenox0';
 const REGION = process.env.MLS_REGION || 'us-east-1';
 const NODE_ID = process.env.MLS_NODE_ID || os.hostname();

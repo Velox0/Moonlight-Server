@@ -5,7 +5,7 @@
     "supersecrettokenox1"
   ],
   "retry_count": 3,
-  "port": 8000,
+  "port": 8080,
   "region_hierarchy": {
     "us-east-1": "usa",
     "us-east-2": "usa",
