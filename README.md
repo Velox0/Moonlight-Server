@@ -14,7 +14,7 @@ A lightweight HTTP JSON proxy that selects a registered client by region and for
 ### Quick start
 ```bash
 make build
-./build/app
+./build/moonlight-server
 # or
 make run
 ```
