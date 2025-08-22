@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package moonlight;
+
+option go_package = "github.com/velox0/moonlight-server-proto";
+
+service Moonlight {
+  rpc Connect(stream TaskStreamMessage) returns (stream TaskStreamMessage);
+}
+
+// Registration info sent as the first message from client
+message ClientHello {
+  string ip = 1;
+  string node_id = 2;
+  string token = 3;
+  string region = 4;
+  int32 port = 5;
+}
+
+// Task as sent to client
+message Task {
+  string id = 1;
+  string region = 2;
+  bytes payload = 3; // Arbitrary payload (could be JSON)
+}
+
+// Task result as sent from client to server
+message TaskResult {
+  string id = 1;
+  bytes data = 2; // Task result
+  string err = 3; // Error string if any
+}
+
+// Message wrapper so both registration and tasks/results flow over one stream
+message TaskStreamMessage {
+  oneof msg {
+    ClientHello hello = 1;
+    Task task = 2;
+    TaskResult result = 3;
+  }
+}
