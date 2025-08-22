@@ -1,0 +1,18 @@
+{
+  "name": "clients",
+  "version": "1.0.0",
+  "description": "",
+  "main": "moonlight_grpc_web_pb.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.8.0",
+    "express": "^5.1.0"
+  }
+}
