@@ -173,4 +173,5 @@ vite.config.ts.timestamp-*
 
 # generarted proto files
 clients/*_pb.js
+clients/*.proto
 moonlight_server_proto/*.pb.go
