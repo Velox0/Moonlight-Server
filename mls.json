@@ -6,6 +6,15 @@
   ],
   "retry_count": 3,
   "port": 8080,
+  "enable_grpc": true,
+  "grpc_port": 8081,
+  "grpc_config": {
+    "max_message_size": 8388608,
+    "keepalive_time": 60,
+    "keepalive_timeout": 10,
+    "enable_reflection": false,
+    "enable_compression": true
+  },
   "region_hierarchy": {
     "us-east-1": "usa",
     "us-east-2": "usa",
