@@ -154,7 +154,7 @@ class MoonlightWebSocketClient:
                 "type": "task_response",
                 "payload": {
                     "task_id": task_id,
-                    "response": json.dumps({"error": str(e)}),
+                    "response": {"error": str(e)},
                     "status": 500,
                     "headers": {"Content-Type": "application/json"}
                 }
@@ -170,12 +170,13 @@ class MoonlightWebSocketClient:
         await asyncio.sleep(0.1)
         
         # For this example, we'll just echo back the payload
+        # Return raw data instead of pre-serialized JSON to avoid double serialization
         return {
-            "data": json.dumps({
+            "data": {
                 "processed": True,
                 "original": payload,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            }),
+            },
             "status": 200,
             "headers": {"Content-Type": "application/json"}
         }

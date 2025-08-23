@@ -84,9 +84,14 @@ const app = http.createServer(async (req, res) => {
             console.log('Received work body:', body);
             try {
                 // Validate JSON
-                JSON.parse(body || '{}');
+                const parsedBody = JSON.parse(body || '{}');
+                const response = {
+                    ...parsedBody,
+                    timestamp: new Date().toISOString(),
+                    node_id: NODE_ID
+                };
                 res.setHeader('Content-Type', 'application/json');
-                res.end(body);
+                res.end(JSON.stringify(response));
             } catch (e) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');

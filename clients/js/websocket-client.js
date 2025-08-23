@@ -140,7 +140,7 @@ class MoonlightWebSocketClient {
                 type: 'task_response',
                 payload: {
                     task_id: message.task_id,
-                    response: JSON.stringify({ error: error.message }),
+                    response: { error: error.message },
                     status: 500,
                     headers: { 'Content-Type': 'application/json' }
                 }
@@ -159,12 +159,13 @@ class MoonlightWebSocketClient {
         // Simulate some processing time
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // Return raw data instead of pre-serialized JSON to avoid double serialization
         return {
-            data: JSON.stringify({
+            data: {
                 processed: true,
                 timestamp: new Date().toISOString(),
                 data: payload
-            }),
+            },
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         };
