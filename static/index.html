@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moonlight Server Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+
+        .status-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .status-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .websocket-status {
+            background: #e8f5e8;
+            border-left-color: #28a745;
+        }
+
+        .websocket-status.offline {
+            background: #ffeaea;
+            border-left-color: #dc3545;
+        }
+
+        .client-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+
+        .client-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .client-item:last-child {
+            border-bottom: none;
+        }
+
+        .client-info {
+            flex: 1;
+        }
+
+        .client-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .test-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🌙 Moonlight Server Dashboard</h1>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <h3>Server Status</h3>
+                <div class="status-value" id="server-status">Online</div>
+            </div>
+            <div class="status-card websocket-status" id="ws-status-card">
+                <h3>WebSocket Status</h3>
+                <div class="status-value" id="ws-status">Connecting...</div>
+            </div>
+            <div class="status-card">
+                <h3>Active Clients</h3>
+                <div class="status-value" id="client-count">0</div>
+            </div>
+            <div class="status-card">
+                <h3>Tasks Processed</h3>
+                <div class="status-value" id="task-count">0</div>
+            </div>
+        </div>
+
+        <div class="client-list">
+            <h3>Connected Clients</h3>
+            <div id="client-list">
+                <p>No clients connected</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Task Request</h3>
+            <form id="task-form">
+                <label for="region">Region:</label>
+                <input type="text" id="region" value="test-region" placeholder="Enter region">
+
+                <label for="payload">Payload (JSON):</label>
+                <textarea id="payload"
+                    placeholder='{"test": "data", "message": "Hello from dashboard!"}'>{"test": "data", "message": "Hello from dashboard!"}</textarea>
+
+                <button type="submit">Send Task</button>
+            </form>
+            <div id="task-result"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let taskCount = 0;
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function () {
+                updateWebSocketStatus('Connected', true);
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = function (event) {
+                const message = JSON.parse(event.data);
+                console.log('Received:', message);
+
+                if (message.type === 'task') {
+                    taskCount++;
+                    document.getElementById('task-count').textContent = taskCount;
+                }
+            };
+
+            ws.onclose = function () {
+                updateWebSocketStatus('Disconnected', false);
+                console.log('WebSocket disconnected');
+                // Try to reconnect after 5 seconds
+                setTimeout(initWebSocket, 5000);
+            };
+
+            ws.onerror = function (error) {
+                updateWebSocketStatus('Error', false);
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function updateWebSocketStatus(status, isOnline) {
+            const statusElement = document.getElementById('ws-status');
+            const statusCard = document.getElementById('ws-status-card');
+
+            statusElement.textContent = status;
+
+            if (isOnline) {
+                statusCard.classList.remove('offline');
+            } else {
+                statusCard.classList.add('offline');
+            }
+        }
+
+        // Handle task form submission
+        document.getElementById('task-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const region = document.getElementById('region').value;
+            const payloadText = document.getElementById('payload').value;
+            const resultDiv = document.getElementById('task-result');
+
+            try {
+                const payload = JSON.parse(payloadText);
+
+                const response = await fetch('/task/request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        region: region,
+                        payload: payload
+                    })
+                });
+
+                const result = await response.text();
+
+                resultDiv.innerHTML = `
+                    <h4>Response (Status: ${response.status}):</h4>
+                    <pre>${result}</pre>
+                `;
+
+                taskCount++;
+                document.getElementById('task-count').textContent = taskCount;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h4>Error:</h4>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        });
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function () {
+            initWebSocket();
+
+            // Update server status
+            document.getElementById('server-status').textContent = 'Online';
+
+            // Simulate client updates (in a real implementation, this would come from the server)
+            setInterval(() => {
+                const clientCount = Math.floor(Math.random() * 5);
+                document.getElementById('client-count').textContent = clientCount;
+
+                const clientList = document.getElementById('client-list');
+                if (clientCount === 0) {
+                    clientList.innerHTML = '<p>No clients connected</p>';
+                } else {
+                    clientList.innerHTML = `
+                        <div class="client-item">
+                            <div class="client-info">
+                                <strong>test-node-1</strong> (test-region)
+                            </div>
+                            <span class="client-status status-online">Online</span>
+                        </div>
+                    `;
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+
+</html>

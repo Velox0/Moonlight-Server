@@ -6,6 +6,21 @@
   ],
   "retry_count": 3,
   "port": 8080,
+  "ws": {
+    "enabled": true,
+    "path": "/ws",
+    "max_connections": 1000,
+    "read_timeout": 300,
+    "write_timeout": 30,
+    "heartbeat_interval": 30,
+    "connection_check_interval": 60
+  },
+  "html": {
+    "enabled": true,
+    "static_path": "/static",
+    "index_path": "/",
+    "dashboard_path": "/dashboard"
+  },
   "region_hierarchy": {
     "us-east-1": "usa",
     "us-east-2": "usa",

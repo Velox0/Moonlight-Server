@@ -8,11 +8,32 @@ import (
 	"strings"
 )
 
+// WebSocketConfig structure for WebSocket settings
+type WebSocketConfig struct {
+	Enabled                 bool   `json:"enabled"`
+	Path                    string `json:"path"`
+	MaxConnections          int    `json:"max_connections"`
+	ReadTimeout             int    `json:"read_timeout"`
+	WriteTimeout            int    `json:"write_timeout"`
+	HeartbeatInterval       int    `json:"heartbeat_interval"`
+	ConnectionCheckInterval int    `json:"connection_check_interval"`
+}
+
+// HTMLConfig structure for HTML/static file settings
+type HTMLConfig struct {
+	Enabled       bool   `json:"enabled"`
+	StaticPath    string `json:"static_path"`
+	IndexPath     string `json:"index_path"`
+	DashboardPath string `json:"dashboard_path"`
+}
+
 // Config structure for server
 type Config struct {
 	Tokens          []string          `json:"tokens"`
 	RetryCount      int               `json:"retry_count"`
 	Port            int               `json:"port"`
+	WS              WebSocketConfig   `json:"ws"`
+	HTML            HTMLConfig        `json:"html"`
 	RegionHierarchy map[string]string `json:"region_hierarchy"`
 }
 
@@ -32,17 +53,33 @@ func printConfigMinimal(cfg *Config) {
 		hierarchy = strings.Join(pairs, ", ")
 	}
 
+	// WebSocket status
+	wsStatus := "disabled"
+	if cfg.WS.Enabled {
+		wsStatus = fmt.Sprintf("enabled (path: %s)", cfg.WS.Path)
+	}
+
+	// HTML status
+	htmlStatus := "disabled"
+	if cfg.HTML.Enabled {
+		htmlStatus = fmt.Sprintf("enabled (static: %s)", cfg.HTML.StaticPath)
+	}
+
 	fmt.Printf(
 		"================ CONFIG ================\n"+
 			"Tokens           : [%s]\n"+
 			"RetryCount       : %d\n"+
 			"Region Hierarchy : %s\n"+
 			"Port             : %d\n"+
+			"WebSocket        : %s\n"+
+			"HTML             : %s\n"+
 			"=======================================\n",
 		strings.Join(cfg.Tokens, ", "),
 		cfg.RetryCount,
 		hierarchy,
 		cfg.Port,
+		wsStatus,
+		htmlStatus,
 	)
 }
 
@@ -59,6 +96,37 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if cfg.Port == 0 {
 		cfg.Port = 8080
+	}
+
+	// Set default WebSocket configuration
+	if cfg.WS.Path == "" {
+		cfg.WS.Path = "/ws"
+	}
+	if cfg.WS.MaxConnections == 0 {
+		cfg.WS.MaxConnections = 1000
+	}
+	if cfg.WS.ReadTimeout == 0 {
+		cfg.WS.ReadTimeout = 300
+	}
+	if cfg.WS.WriteTimeout == 0 {
+		cfg.WS.WriteTimeout = 30
+	}
+	if cfg.WS.HeartbeatInterval == 0 {
+		cfg.WS.HeartbeatInterval = 30
+	}
+	if cfg.WS.ConnectionCheckInterval == 0 {
+		cfg.WS.ConnectionCheckInterval = 60
+	}
+
+	// Set default HTML configuration
+	if cfg.HTML.StaticPath == "" {
+		cfg.HTML.StaticPath = "/static"
+	}
+	if cfg.HTML.IndexPath == "" {
+		cfg.HTML.IndexPath = "/"
+	}
+	if cfg.HTML.DashboardPath == "" {
+		cfg.HTML.DashboardPath = "/dashboard"
 	}
 
 	printConfigMinimal(&cfg)
