@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -48,6 +49,9 @@ func main() {
 
 	// Client table endpoint
 	http.HandleFunc("/clients/table", clientsTableHandler)
+
+	// Region endpoint
+	http.HandleFunc("/region", regionListHandler)
 
 	// HTML dashboard (only if enabled)
 	if cfg.HTML.Enabled {
@@ -163,4 +167,28 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	j, _ := json.Marshal(rows)
 	w.Write(j)
+}
+
+func regionListHandler(w http.ResponseWriter, r *http.Request) {
+	// Get all regions from configuration
+	var regions []string
+
+	// Add global option first
+	regions = append(regions, "global")
+
+	// Add all regions from the region hierarchy
+	if config != nil && config.RegionHierarchy != nil {
+		for region := range config.RegionHierarchy {
+			regions = append(regions, region)
+		}
+	}
+
+	// Sort regions alphabetically (global will be first)
+	sort.Strings(regions)
+
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"regions": regions,
+	})
 }
