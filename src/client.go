@@ -2,12 +2,50 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"sync"
 	"time"
 )
+
+// Protocol represents the communication protocol used by a client
+type Protocol int
+
+const (
+	ProtocolHTTP Protocol = iota
+	ProtocolWS
+)
+
+// MarshalJSON implements json.Marshaler interface
+func (p Protocol) MarshalJSON() ([]byte, error) {
+	switch p {
+	case ProtocolHTTP:
+		return json.Marshal("http")
+	case ProtocolWS:
+		return json.Marshal("ws")
+	default:
+		return json.Marshal("unknown")
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler interface
+func (p Protocol) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	switch s {
+	case "http":
+		p = ProtocolHTTP
+	case "ws":
+		p = ProtocolWS
+	default:
+		return fmt.Errorf("unknown protocol: %s", s)
+	}
+	return nil
+}
 
 type ClientInfo struct {
 	IP         string
@@ -18,12 +56,15 @@ type ClientInfo struct {
 	LastSeen   time.Time
 	AvgLatency time.Duration
 	Valid      bool
+	Protocol   Protocol
 	Mutex      sync.Mutex
 }
 
 var (
-	clients      = make(map[string]*ClientInfo) // key: IP + NodeID
-	clientsMutex sync.Mutex
+	clients       = make(map[string]*ClientInfo) // key: IP + NodeID
+	clientsMutex  sync.Mutex
+	nodeIDCounter int = 1
+	nodeIDMutex   sync.Mutex
 )
 
 // Generate client key
@@ -31,7 +72,15 @@ func clientKey(ip, nodeID string) string {
 	return ip + ":" + nodeID
 }
 
-// Client heartbeat handler
+func assignNodeID() string {
+	nodeIDMutex.Lock()
+	id := nodeIDCounter
+	nodeIDCounter++
+	nodeIDMutex.Unlock()
+	return fmt.Sprintf("auto-%d", id)
+}
+
+// Client heartbeat handler (HTTP)
 func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -48,10 +97,11 @@ func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, _ := io.ReadAll(r.Body)
 	err := json.Unmarshal(body, &req)
-	if err != nil || req.IP == "" || req.NodeID == "" || req.Region == "" || req.Token == "" {
+	if err != nil || req.IP == "" || req.Region == "" || req.Token == "" {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
+
 	if !validToken(req.Token) {
 		http.Error(w, "unauthorized token", http.StatusUnauthorized)
 		return
@@ -60,15 +110,23 @@ func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Port == 0 {
 		req.Port = 3000
 	}
+	if req.NodeID == "" {
+		req.NodeID = assignNodeID()
+	}
+
 	key := clientKey(req.IP, req.NodeID)
 	clientsMutex.Lock()
 	client, exists := clients[key]
 	if !exists {
-		client = &ClientInfo{IP: req.IP, NodeID: req.NodeID, Token: req.Token, Region: req.Region, Port: req.Port, Valid: true}
+		client = &ClientInfo{
+			IP: req.IP, NodeID: req.NodeID, Token: req.Token,
+			Region: req.Region, Port: req.Port, Valid: true, Protocol: ProtocolHTTP,
+		}
 		clients[key] = client
 	} else {
 		client.Mutex.Lock()
 		client.Region, client.Token, client.Port, client.Valid = req.Region, req.Token, req.Port, true
+		client.Protocol = ProtocolHTTP
 		client.Mutex.Unlock()
 	}
 	client.Mutex.Lock()

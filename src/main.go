@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
 var (
@@ -30,6 +32,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to load config from any location: %v\n", err)
 		os.Exit(1)
 	}
+
 	config = cfg
 
 	// Handlers
@@ -42,6 +45,9 @@ func main() {
 		startConnectionHealthChecker()
 		fmt.Printf("WebSocket enabled on path: %s\n", cfg.WS.Path)
 	}
+
+	// Client table endpoint
+	http.HandleFunc("/clients/table", clientsTableHandler)
 
 	// HTML dashboard (only if enabled)
 	if cfg.HTML.Enabled {
@@ -65,6 +71,10 @@ func main() {
 
 		fmt.Printf("HTML dashboard enabled on path: %s\n", cfg.HTML.DashboardPath)
 	}
+
+	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/favicon.ico")
+	})
 
 	fmt.Printf("Server started on port:%d\n", cfg.Port)
 	fmt.Printf("Accessible at: http://localhost:%d (loopback)\n", cfg.Port)
@@ -110,4 +120,47 @@ func getLocalIPv4Addrs() []string {
 		}
 	}
 	return result
+}
+
+func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
+	type ClientTableRow struct {
+		NodeID    string   `json:"node_id"`
+		IP        string   `json:"ip"`
+		Protocol  Protocol `json:"protocol"`
+		LastSeen  string   `json:"last_seen"`
+		Connected string   `json:"connected"`
+	}
+
+	clientsMutex.Lock()
+	var rows []ClientTableRow
+	for _, client := range clients {
+		client.Mutex.Lock()
+		status := "connected"
+		if !client.Valid {
+			status = "disconnected"
+		}
+		rows = append(rows, ClientTableRow{
+			NodeID:    client.NodeID,
+			IP:        client.IP,
+			Protocol:  client.Protocol,
+			LastSeen:  client.LastSeen.Format(time.RFC3339),
+			Connected: status,
+		})
+		client.Mutex.Unlock()
+	}
+	clientsMutex.Unlock()
+
+	// If Accept: text/html, render as HTML table
+	if r.Header.Get("Accept") == "text/html" {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, "<table border='1'><tr><th>NodeID</th><th>IP</th><th>Protocol</th><th>Last Seen</th><th>Status</th></tr>")
+		for _, row := range rows {
+			fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>", row.NodeID, row.IP, row.Protocol, row.LastSeen, row.Connected)
+		}
+		fmt.Fprintf(w, "</table>")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	j, _ := json.Marshal(rows)
+	w.Write(j)
 }
