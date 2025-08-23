@@ -28,7 +28,7 @@
         h1 {
             text-align: center;
             margin-bottom: 40px;
-            color: #6b8e23;
+            color: #9ab;
             font-weight: 600;
             font-size: 2.5rem;
         }
@@ -44,7 +44,7 @@
             background: #4a5568;
             padding: 25px;
             border-radius: 4px;
-            border-left: 4px solid #6b8e23;
+            border-left: 4px solid #9ab;
             text-align: center;
             font-weight: 600;
             font-size: 1.2rem;
@@ -69,7 +69,7 @@
         .client-list h3 {
             margin-top: 0;
             margin-bottom: 20px;
-            color: #6b8e23;
+            color: #9ab;
             font-weight: 600;
             font-size: 1.4rem;
         }
@@ -83,7 +83,7 @@
         }
 
         .clients-table th {
-            background: #6b8e23;
+            background: #9ab;
             color: #1a202c;
             padding: 16px 20px;
             text-align: left;
@@ -149,7 +149,7 @@
         }
 
         .protocol-badge.http {
-            background: #6b8e23;
+            background: #9ab;
             color: #1a202c;
             font-weight: 600;
         }
@@ -168,7 +168,7 @@
         }
 
         .test-section h3 {
-            color: #6b8e23;
+            color: #9ab;
             font-weight: 600;
             font-size: 1.4rem;
             margin-bottom: 20px;
@@ -199,7 +199,7 @@
         .test-section textarea:focus,
         .test-section select:focus {
             outline: none;
-            border-color: #6b8e23;
+            border-color: #9ab;
         }
 
         .test-section textarea {
@@ -209,7 +209,7 @@
 
         .test-section button {
             margin-top: 20px;
-            background: #6b8e23;
+            background: #9ab;
             color: #1a202c;
             border: none;
             padding: 12px 24px;
@@ -217,6 +217,11 @@
             cursor: pointer;
             font-size: 1rem;
             font-weight: 600;
+            transition: .3s;
+        }
+
+        .test-section button:hover {
+            background-color: #abc;
         }
 
         #task-result {
@@ -236,7 +241,7 @@
         }
 
         #task-result h4 {
-            color: #6b8e23;
+            color: #9ab;
             margin-top: 0;
             margin-bottom: 10px;
             font-weight: 600;
@@ -279,7 +284,7 @@
                 <label for="payload">Payload (JSON):</label>
                 <textarea id="payload"
                     placeholder='{"test": "data"}'>{"test": "data", "message": "Hello from dashboard!"}</textarea>
-                <button type="submit">Send Task</button>
+                <button class="submit-button" type="submit">Send Task</button>
             </form>
             <div id="task-result"></div>
         </div>
@@ -372,7 +377,6 @@
                             <tr>
                                 <th>Status</th>
                                 <th>Node ID</th>
-                                <th>IP Address</th>
                                 <th>Protocol</th>
                                 <th>Last Seen</th>
                             </tr>
@@ -417,7 +421,6 @@
                                 ${isOnline ? 'Online' : 'Offline'}
                             </td>
                             <td><strong>${client.node_id}</strong></td>
-                            <td>${client.ip}</td>
                             <td><span class="protocol-badge ${protocolClass}">${client.protocol}</span></td>
                             <td>${lastSeen}</td>
                         </tr>`;

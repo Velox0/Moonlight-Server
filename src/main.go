@@ -129,7 +129,6 @@ func getLocalIPv4Addrs() []string {
 func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 	type ClientTableRow struct {
 		NodeID    string   `json:"node_id"`
-		IP        string   `json:"ip"`
 		Protocol  Protocol `json:"protocol"`
 		LastSeen  string   `json:"last_seen"`
 		Connected string   `json:"connected"`
@@ -145,7 +144,6 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		rows = append(rows, ClientTableRow{
 			NodeID:    client.NodeID,
-			IP:        client.IP,
 			Protocol:  client.Protocol,
 			LastSeen:  client.LastSeen.Format(time.RFC3339),
 			Connected: status,
@@ -159,7 +157,7 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, "<table border='1'><tr><th>NodeID</th><th>IP</th><th>Protocol</th><th>Last Seen</th><th>Status</th></tr>")
 		for _, row := range rows {
-			fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>", row.NodeID, row.IP, row.Protocol, row.LastSeen, row.Connected)
+			fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>", row.NodeID, row.Protocol, row.LastSeen, row.Connected)
 		}
 		fmt.Fprintf(w, "</table>")
 		return
