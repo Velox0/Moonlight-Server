@@ -1,31 +1,39 @@
-## Moonlight Server
+## Moonlight Server 🌙
 
-![Moonlight Server](images/banner.png)
+<p align="center">
+  <img src="images/banner.png" alt="Moonlight Server Dashboard" width="800" style="border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);" />
+</p>
 
-A lightweight HTTP JSON proxy that selects a registered client by region and forwards your payload, returning the client's response as-is. Now supports both HTTP and WebSocket communication for enhanced real-time capabilities.
+
+A lightweight HTTP JSON proxy that selects a registered client by region and forwards your payload, returning the client's response as-is. Supports both HTTP and WebSocket communication with a modern web dashboard for monitoring and management.
 
 ### Features
-- Token-gated client registration (heartbeats)
+- Token-gated client registration with secure authentication
 - Region-aware client selection with hierarchical fallback
 - Simple load balancing by recency and latency
-- Server-assigned job IDs (incoming IDs ignored)
+- Server-assigned job IDs for task tracking
 - Payload-only proxy: only `payload` is sent to the client
-- **NEW**: WebSocket support for real-time communication
-- **NEW**: Automatic fallback from WebSocket to HTTP if needed
+- WebSocket support for real-time communication
+- Automatic fallback from WebSocket to HTTP if needed
+- Modern web dashboard with real-time monitoring
+- Dynamic region selection via API endpoint
+- Security-focused: No IP address exposure in dashboard
 
-### Quick start
+### Quick Start
 ```bash
 make build
 ./build/moonlight-server
 # or
 make run
 ```
-Copy config (example at repo root) to the default path:
+
+Copy config to the default path:
 ```bash
 sudo mkdir -p /etc/moonlight
 sudo cp mls.json /etc/moonlight/mls.json
 ```
-The server listens on `:8080`.
+
+The server listens on `:8080` by default.
 
 ### Configuration
 Minimal `/etc/moonlight/mls.json`:
@@ -38,8 +46,10 @@ Minimal `/etc/moonlight/mls.json`:
     "enabled": true,
     "path": "/ws",
     "max_connections": 1000,
-    "read_timeout": 60,
-    "write_timeout": 10
+    "read_timeout": 300,
+    "write_timeout": 30,
+    "heartbeat_interval": 30,
+    "connection_check_interval": 60
   },
   "html": {
     "enabled": true,
@@ -49,43 +59,22 @@ Minimal `/etc/moonlight/mls.json`:
   },
   "region_hierarchy": {
     "us-east-1": "usa",
+    "us-west-2": "usa",
     "usa": "northamerica",
     "northamerica": "global"
   }
 }
 ```
 
-#### Configuration Options
 
-**WebSocket Configuration (`ws`):**
-- `enabled`: Enable/disable WebSocket functionality (default: true)
-- `path`: WebSocket endpoint path (default: "/ws")
-- `max_connections`: Maximum concurrent WebSocket connections (default: 1000)
-- `read_timeout`: Read timeout in seconds (default: 60)
-- `write_timeout`: Write timeout in seconds (default: 10)
-
-**HTML Configuration (`html`):**
-- `enabled`: Enable/disable HTML dashboard (default: true)
-- `static_path`: Static files path (default: "/static")
-- `index_path`: Index page path (default: "/")
-- `dashboard_path`: Dashboard path (default: "/dashboard")
 
 ### HTTP API
 All endpoints use/return JSON.
 
-- POST `/client/heartbeat`
-  - Body:
-    ```json
-    { "ip": "1.2.3.4", "node_id": "node-1", "token": "supersecrettoken1", "region": "us-east-1", "port": 3000 }
-    ```
-  - Responses: 200 "registered"; 401 invalid token; 405 wrong method
-
-- POST `/task/request`
-  - Body:
-    ```json
-    { "region": "usa", "payload": {"any": "json"} }
-    ```
-  - Behavior: server assigns a job ID, forwards only `payload` to the chosen client, and returns that client's response body/status.
+- **POST `/client/heartbeat`** - Register client
+- **POST `/task/request`** - Submit task for processing
+- **GET `/clients/table`** - Get connected clients list
+- **GET `/region`** - Get available regions list
 
 ### WebSocket API
 Connect to `ws://server:port/ws` for real-time communication.
@@ -138,52 +127,52 @@ Connect to `ws://server:port/ws` for real-time communication.
 }
 ```
 
+### Web Dashboard
+
+<p align="center">
+  <img src="images/dashboard-screenshot.png" alt="Moonlight Server Dashboard" width="800" style="border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);" />
+</p>
+
+When HTML is enabled, the server provides a modern web dashboard with:
+
+Access at `http://server:port/` or `http://server:port/dashboard`
+
 ### Clients
 
-#### Node.js Client
+#### Node.js WebSocket Client
 ```bash
-cd clients
+cd clients/js
 npm install
 node websocket-client.js
 ```
 
-#### Python Client
+#### Python WebSocket Client
 ```bash
-cd clients
+cd clients/python
 pip install -r requirements.txt
 python websocket-client.py
 ```
 
-#### Legacy HTTP Client
-Example Node.js HTTP client is in `clients/node-client.js`. It heartbeats automatically and exposes `/work` which echoes the body.
+#### Node.js HTTP Client (Legacy)
+```bash
+cd clients/js
+node node-client.js
+```
 
-### HTML Dashboard
+#### Client Configuration
+Set environment variables for client configuration:
+```bash
+export MLS_HOST=localhost
+export MLS_PORT=8080
+export MLS_TOKEN=supersecrettoken1
+export MLS_REGION=us-east-1
+export MLS_NODE_ID=my-node-1
+export CLIENT_PORT=3000
+```
 
-When HTML is enabled in the configuration, the server provides a web-based dashboard at the configured paths:
 
-- **Main Dashboard**: `http://server:port/` or `http://server:port/dashboard`
-- **Static Files**: `http://server:port/static/`
-
-The dashboard provides:
-- Real-time server status monitoring
-- WebSocket connection status
-- Active client count
-- Task processing statistics
-- Interactive task testing interface
-- Live WebSocket connection to the server
-
-To access the dashboard, simply open your browser and navigate to the server URL.
-
-### Communication Flow
-
-1. **WebSocket (Preferred)**: Clients connect via WebSocket for real-time communication
-2. **HTTP Fallback**: If WebSocket fails, the server automatically falls back to HTTP
-3. **Task Processing**: Tasks are sent via WebSocket when possible, with automatic response handling
-4. **Load Balancing**: Server selects the best available client based on region, recency, and latency
 
 ### Notes
-- "global", "default", or empty region match any client.
-- If multiple clients match, the most recently seen with the lowest average latency is preferred.
-- WebSocket connections are automatically managed with reconnection logic.
-- Task responses are handled asynchronously with proper timeout handling.
+- "global", "default", or empty region match any client
+- If multiple clients match, the most recently seen with lowest latency is preferred
 
