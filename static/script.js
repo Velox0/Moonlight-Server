@@ -195,14 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add theme toggle event listener
     const themeToggle = document.getElementById('theme-toggle');
-    console.log('Theme toggle button found:', themeToggle);
+    // console.log('Theme toggle button found:', themeToggle);
 
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
-        console.log('Theme toggle event listener added');
-    } else {
-        console.error('Theme toggle button not found!');
-    }
+    if (themeToggle)
+        themeToggle.addEventListener('mousedown', toggleTheme);
+
 
     initWebSocket();
     document.getElementById('server-status').textContent = 'Online';

@@ -19,20 +19,23 @@
         <div class="status-json-wrapper" aria-live="polite" aria-atomic="true" role="region"
             aria-label="Status Information">
             <span class="status-json-brace">{</span>
-            <div class="status-json">
-                <div class="keys">
-                    <div>"server":</div>
-                    <div id="ws-status-card">"websocket":</div>
-                    <div>"clients":</div>
-                    <div>"tasks":</div>
-                </div>
-                <div class="values">
-                    <span id="server-status" class="status-online">Loading...</span>
-                    <span id="ws-status" class="status-connected">Connecting...</span>
-                    <span id="client-count" class="status-num">0</span>
-                    <span id="task-count" class="status-num">0</span>
-                </div>
-            </div>
+            <table class="status-json" cellpadding="6" cellspacing="0">
+                <tbody>
+                    <tr>
+                        <td>server</td>
+                        <td><span id="server-status" class="status-online">Loading...</span></td>
+                    </tr>
+                    <tr>
+                        <td>websocket</td>
+                        <td><span id="ws-status" class="status-connected">Connecting...</span></td>
+                    </tr>
+                    <tr>
+                        <td>clients</td>
+                        <td><span id="client-count" class="status-num">0</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
             <span class="status-json-brace">}</span>
         </div>
 
