@@ -2,6 +2,8 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap');
 
 /* CSS Variables for theming */
+
+/* Default theme */
 :root {
     --bg-primary: #1a1e23;
     --bg-secondary: rgba(40, 50, 60, 0.65);
@@ -26,24 +28,46 @@
 
 /* Light theme */
 [data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: rgba(255, 255, 255, 0.95);
-    --bg-tertiary: rgba(248, 249, 250, 0.98);
-    --text-primary: #000000;
-    --text-secondary: #333333;
-    --text-accent: #000000;
-    --border-primary: #cccccc;
-    --border-accent: rgba(0, 0, 0, 0.2);
-    --shadow-primary: rgba(0, 0, 0, 0.1);
-    --shadow-accent: rgba(0, 0, 0, 0.15);
-    --accent-primary: #000000;
-    --accent-secondary: #0f0f0f;
-    --status-online: #000000;
+    --bg-primary: #f9f9f9;
+    --bg-secondary: rgba(252, 252, 252, 0.95);
+    --bg-tertiary: rgba(245, 246, 247, 0.98);
+    --text-primary: #111111;
+    --text-secondary: #444444;
+    --text-accent: #1a1a1a;
+    --border-primary: #d0d0d0;
+    --border-accent: rgba(0, 0, 0, 0.15);
+    --shadow-primary: rgba(0, 0, 0, 0.05);
+    --shadow-accent: rgba(0, 0, 0, 0.1);
+    --accent-primary: #1a1a1a;
+    --accent-secondary: #2b2b2b;
+    --status-online: #222222;
     --status-offline: #666666;
-    --protocol-http: #333333;
-    --protocol-ws: #000000;
-    --gradient-start: #000000;
-    --gradient-end: #666666;
+    --protocol-http: #444444;
+    --protocol-ws: #1a1a1a;
+    --gradient-start: #1a1a1a;
+    --gradient-end: #777777;
+}
+
+/* Midnight theme */
+[data-theme="midnight"] {
+    --bg-primary: #0d0d0d;
+    --bg-secondary: rgba(18, 18, 18, 0.95);
+    --bg-tertiary: rgba(24, 25, 26, 0.98);
+    --text-primary: #e5e5e5;
+    --text-secondary: #b3b3b3;
+    --text-accent: #f0f0f0;
+    --border-primary: #444444;
+    --border-accent: rgba(255, 255, 255, 0.15);
+    --shadow-primary: rgba(0, 0, 0, 0.6);
+    --shadow-accent: rgba(0, 0, 0, 0.75);
+    --accent-primary: #d9d9d9;
+    --accent-secondary: #c2c2c2;
+    --status-online: #cccccc;
+    --status-offline: #777777;
+    --protocol-http: #b3b3b3;
+    --protocol-ws: #e0e0e0;
+    --gradient-start: #d0d0d0;
+    --gradient-end: #888888;
 }
 
 body {
@@ -275,28 +299,32 @@ table.status-json {
     vertical-align: middle;
 }
 
-.status-dot.online {
-    background: var(--status-online);
-    animation: pulse-green 2.5s infinite;
-}
-
 .status-dot.offline {
     background: var(--status-offline);
 }
 
-@keyframes pulse-green {
+.status-dot.online {
+    background: var(--status-online);
+
+}
+
+@keyframes pulse {
     0% {
-        box-shadow: 0 0 0 0 var(--status-online);
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(var(--status-online-rgb), 0.7);
     }
 
-    70% {
-        box-shadow: 0 0 0 12px transparent;
+    30% {
+        transform: scale(1.5);
+        box-shadow: 0 0 0 10px rgba(var(--status-online-rgb), 0);
     }
 
-    100% {
-        box-shadow: 0 0 0 0 transparent;
+    90% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(var(--status-online-rgb), 0.7);
     }
 }
+
 
 .protocol-badge {
     font-size: 0.77rem;

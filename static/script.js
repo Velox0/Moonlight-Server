@@ -1,42 +1,65 @@
 let ws = null;
 
-// Theme management
-let currentTheme = localStorage.getItem('theme') || 'dark';
+// Supported themes in cycle order
+const THEMES = ['default', 'light', 'midnight'];
+
+// Get saved theme or default if none
+let currentTheme = localStorage.getItem('theme') || 'default';
+
+function applyTheme(theme) {
+    const htmlEl = document.documentElement;
+    if (theme === 'default') {
+        htmlEl.removeAttribute('data-theme');
+    } else {
+        htmlEl.setAttribute('data-theme', theme);
+    }
+}
 
 function setTheme(theme) {
     console.log('setTheme called with:', theme);
 
-    document.documentElement.removeAttribute('data-theme');
-    setTimeout(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        console.log('data-theme attribute set to:', document.documentElement.getAttribute('data-theme'));
-    }, 10);
+    applyTheme(theme);
 
     currentTheme = theme;
     localStorage.setItem('theme', theme);
 
     const themeToggle = document.getElementById('theme-toggle');
-    const themeIcon = themeToggle.querySelector('.theme-icon');
+    const themeIcon = themeToggle ? themeToggle.querySelector('.theme-icon') : null;
 
+    // Update theme icon based on theme
+    // You can customize these icons for your preference
     if (theme === 'light') {
-        themeIcon.textContent = '☀️';
+        if (themeIcon) themeIcon.textContent = '☀️';
+    } else if (theme === 'midnight') {
+        if (themeIcon) themeIcon.textContent = '🌌';
     } else {
-        themeIcon.textContent = '🌙';
+        if (themeIcon) themeIcon.textContent = '🌙';
     }
 
     // Update debug indicator
     const themeDebug = document.getElementById('theme-debug');
     if (themeDebug) {
         themeDebug.textContent = `Theme: ${theme}`;
-        themeDebug.style.background = theme === 'light' ? 'black' : 'red';
+        // Color mapping for debug background to differentiate themes
+        if (theme === 'light') {
+            themeDebug.style.background = 'black';
+        } else if (theme === 'midnight') {
+            themeDebug.style.background = '#222244';
+        } else {
+            themeDebug.style.background = 'darkred';
+        }
     }
 
     console.log('Theme set successfully to:', theme);
 }
 
+// Cycle themes when toggling
 function toggleTheme() {
     console.log('toggleTheme called, currentTheme:', currentTheme);
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    let currentIndex = THEMES.indexOf(currentTheme);
+    if (currentIndex === -1) currentIndex = 0;
+    const newIndex = (currentIndex + 1) % THEMES.length;
+    const newTheme = THEMES[newIndex];
     console.log('Switching to theme:', newTheme);
     setTheme(newTheme);
 }
@@ -190,21 +213,21 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing theme system...');
 
-    // Initialize theme
+    // Initialize theme on page load
     setTheme(currentTheme);
 
     // Add theme toggle event listener
     const themeToggle = document.getElementById('theme-toggle');
-    // console.log('Theme toggle button found:', themeToggle);
-
-    if (themeToggle)
-        themeToggle.addEventListener('mousedown', toggleTheme);
-
+    if (themeToggle) themeToggle.addEventListener('mousedown', toggleTheme);
 
     initWebSocket();
-    document.getElementById('server-status').textContent = 'Online';
+
+    const serverStatus = document.getElementById('server-status');
+    if (serverStatus) serverStatus.textContent = 'Online';
+
     fetchRegions();
     fetchClients();
+
     setInterval(fetchClients, 3000);
     setInterval(fetchRegions, 30000); // Refresh regions every 30 seconds
 });
