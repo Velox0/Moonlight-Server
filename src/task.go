@@ -42,6 +42,8 @@ func generateTaskID() string {
 }
 
 func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return

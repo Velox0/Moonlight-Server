@@ -13,9 +13,9 @@ import (
 func monitorHandler(w http.ResponseWriter, r *http.Request) {
 	monitorData := collectMonitorData()
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(monitorData)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(monitorData); err != nil {
 		http.Error(w, "Failed to encode monitor data", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -28,9 +28,16 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 		Connected string   `json:"connected"`
 	}
 
-	clientsMutex.Lock()
+	// snapshot clients under lock
+	clientsMutex.RLock()
+	snapshot := make([]*ClientInfo, 0, len(clients))
+	for _, c := range clients {
+		snapshot = append(snapshot, c)
+	}
+	clientsMutex.RUnlock()
+
 	var rows []ClientTableRow
-	for _, client := range clients {
+	for _, client := range snapshot {
 		client.Mutex.Lock()
 		status := "connected"
 		if !client.Valid {
@@ -44,7 +51,6 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		client.Mutex.Unlock()
 	}
-	clientsMutex.Unlock()
 
 	// If Accept: text/html, render as HTML table
 	if r.Header.Get("Accept") == "text/html" {
@@ -68,8 +74,10 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	j, _ := json.Marshal(rows)
-	w.Write(j)
+	if err := json.NewEncoder(w).Encode(rows); err != nil {
+		http.Error(w, "Failed to encode client table", http.StatusInternalServerError)
+		return
+	}
 }
 
 // regionListHandler returns the list of regions configured
@@ -86,9 +94,12 @@ func regionListHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(regions)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"regions": regions,
-	})
+	}); err != nil {
+		http.Error(w, "Failed to encode region list", http.StatusInternalServerError)
+		return
+	}
 }
 
 // collectMonitorData gathers runtime and app statistics for /monitor
@@ -96,9 +107,9 @@ func collectMonitorData() MonitorData {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
-	clientsMutex.Lock()
+	clientsMutex.RLock()
 	clientCount := len(clients)
-	clientsMutex.Unlock()
+	clientsMutex.RUnlock()
 
 	requestsMutex.RLock()
 	requestCount := len(requests)

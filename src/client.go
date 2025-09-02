@@ -61,8 +61,8 @@ type ClientInfo struct {
 }
 
 var (
-	clients       = make(map[string]*ClientInfo) // key: IP + NodeID
-	clientsMutex  sync.Mutex
+	clients       = make(map[string]*ClientInfo)
+	clientsMutex  sync.RWMutex
 	nodeIDCounter int = 1
 	nodeIDMutex   sync.Mutex
 )
@@ -82,6 +82,8 @@ func assignNodeID() string {
 
 // Client heartbeat handler (HTTP)
 func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
