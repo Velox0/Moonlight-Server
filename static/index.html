@@ -60,7 +60,18 @@
                 </form>
                 <div id="task-result" role="region" aria-live="polite" aria-atomic="true"></div>
             </section>
+            <div class="monitor-section">
+                <h3>Memory Usage</h3>
+                <canvas id="memoryChart" width="600" height="200"></canvas>
+                <h3>Connected Clients Over Time</h3>
+                <canvas id="clientsChart" width="600" height="200"></canvas>
+            </div>
+
+            <!-- Add Chart.js CDN before your script.js -->
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
         </div>
+        <script src="/static/charts.js"></script>
         <script src="/static/script.js"></script>
     </div>
 

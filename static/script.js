@@ -230,4 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setInterval(fetchClients, 3000);
     setInterval(fetchRegions, 30000); // Refresh regions every 30 seconds
+
+    initMonitorCharts();
+    fetchMonitorData();
+    setInterval(fetchMonitorData, 1500);
 });
