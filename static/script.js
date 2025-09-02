@@ -1,5 +1,46 @@
 let ws = null;
 
+// Theme management
+let currentTheme = localStorage.getItem('theme') || 'dark';
+
+function setTheme(theme) {
+    console.log('setTheme called with:', theme);
+
+    document.documentElement.removeAttribute('data-theme');
+    setTimeout(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        console.log('data-theme attribute set to:', document.documentElement.getAttribute('data-theme'));
+    }, 10);
+
+    currentTheme = theme;
+    localStorage.setItem('theme', theme);
+
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('.theme-icon');
+
+    if (theme === 'light') {
+        themeIcon.textContent = '☀️';
+    } else {
+        themeIcon.textContent = '🌙';
+    }
+
+    // Update debug indicator
+    const themeDebug = document.getElementById('theme-debug');
+    if (themeDebug) {
+        themeDebug.textContent = `Theme: ${theme}`;
+        themeDebug.style.background = theme === 'light' ? 'black' : 'red';
+    }
+
+    console.log('Theme set successfully to:', theme);
+}
+
+function toggleTheme() {
+    console.log('toggleTheme called, currentTheme:', currentTheme);
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    console.log('Switching to theme:', newTheme);
+    setTheme(newTheme);
+}
+
 function updateWebSocketStatus(text, online) {
     const wsStatusEl = document.getElementById('ws-status');
     wsStatusEl.textContent = text;
@@ -147,6 +188,22 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing theme system...');
+
+    // Initialize theme
+    setTheme(currentTheme);
+
+    // Add theme toggle event listener
+    const themeToggle = document.getElementById('theme-toggle');
+    console.log('Theme toggle button found:', themeToggle);
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+        console.log('Theme toggle event listener added');
+    } else {
+        console.error('Theme toggle button not found!');
+    }
+
     initWebSocket();
     document.getElementById('server-status').textContent = 'Online';
     fetchRegions();
