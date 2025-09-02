@@ -1,19 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
-	"sort"
-	"time"
 )
 
-var (
-	config *Config
-)
+var config *Config
 
 func main() {
 	// Load config - try local file first, then system location
@@ -33,7 +27,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to load config from any location: %v\n", err)
 		os.Exit(1)
 	}
-
 	config = cfg
 
 	// Handlers
@@ -52,6 +45,9 @@ func main() {
 
 	// Region endpoint
 	http.HandleFunc("/region", regionListHandler)
+
+	// New monitor endpoint
+	http.HandleFunc("/monitor", monitorHandler)
 
 	// HTML dashboard (only if enabled)
 	if cfg.HTML.Enabled {
@@ -89,104 +85,4 @@ func main() {
 		fmt.Printf("Accessible at: http://%s:%d\n", ip, cfg.Port)
 	}
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), nil))
-}
-
-// getLocalIPv4Addrs returns a list of IPv4 addresses for local interfaces
-func getLocalIPv4Addrs() []string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return []string{"127.0.0.1"}
-	}
-	var result []string
-	seen := map[string]bool{}
-	// Always include loopback first
-	result = append(result, "127.0.0.1")
-	seen["127.0.0.1"] = true
-	for _, addr := range addrs {
-		var ip net.IP
-		switch v := addr.(type) {
-		case *net.IPNet:
-			ip = v.IP
-		case *net.IPAddr:
-			ip = v.IP
-		}
-		if ip == nil || ip.IsLoopback() {
-			continue
-		}
-		ip = ip.To4()
-		if ip == nil {
-			continue
-		}
-		s := ip.String()
-		if !seen[s] {
-			result = append(result, s)
-			seen[s] = true
-		}
-	}
-	return result
-}
-
-func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
-	type ClientTableRow struct {
-		NodeID    string   `json:"node_id"`
-		Protocol  Protocol `json:"protocol"`
-		LastSeen  string   `json:"last_seen"`
-		Connected string   `json:"connected"`
-	}
-
-	clientsMutex.Lock()
-	var rows []ClientTableRow
-	for _, client := range clients {
-		client.Mutex.Lock()
-		status := "connected"
-		if !client.Valid {
-			status = "disconnected"
-		}
-		rows = append(rows, ClientTableRow{
-			NodeID:    client.NodeID,
-			Protocol:  client.Protocol,
-			LastSeen:  client.LastSeen.Format(time.RFC3339),
-			Connected: status,
-		})
-		client.Mutex.Unlock()
-	}
-	clientsMutex.Unlock()
-
-	// If Accept: text/html, render as HTML table
-	if r.Header.Get("Accept") == "text/html" {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, "<table border='1'><tr><th>NodeID</th><th>IP</th><th>Protocol</th><th>Last Seen</th><th>Status</th></tr>")
-		for _, row := range rows {
-			fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>", row.NodeID, row.Protocol, row.LastSeen, row.Connected)
-		}
-		fmt.Fprintf(w, "</table>")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	j, _ := json.Marshal(rows)
-	w.Write(j)
-}
-
-func regionListHandler(w http.ResponseWriter, r *http.Request) {
-	// Get all regions from configuration
-	var regions []string
-
-	// Add global option first
-	regions = append(regions, "global")
-
-	// Add all regions from the region hierarchy
-	if config != nil && config.RegionHierarchy != nil {
-		for region := range config.RegionHierarchy {
-			regions = append(regions, region)
-		}
-	}
-
-	// Sort regions alphabetically (global will be first)
-	sort.Strings(regions)
-
-	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"regions": regions,
-	})
 }
