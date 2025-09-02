@@ -17,7 +17,6 @@ A lightweight HTTP JSON proxy that selects a registered client by region and for
 - Automatic fallback from WebSocket to HTTP if needed
 - Modern web dashboard with real-time monitoring
 - Dynamic region selection via API endpoint
-- Security-focused: No IP address exposure in dashboard
 
 ### Quick Start
 ```bash

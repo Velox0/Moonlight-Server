@@ -137,9 +137,7 @@ func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 	case <-time.After(30 * time.Second):
 		// Timeout
 		taskMutex.Lock()
-		if _, exists := pendingTasks[task.ID]; exists {
-			delete(pendingTasks, task.ID)
-		}
+		delete(pendingTasks, task.ID)
 		taskMutex.Unlock()
 
 		http.Error(w, "task timeout", http.StatusGatewayTimeout)

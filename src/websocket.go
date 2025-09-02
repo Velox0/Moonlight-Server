@@ -12,9 +12,6 @@ import (
 )
 
 var (
-	upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
-	}
 	wsConnections = make(map[string]*WebSocketClientInfo) // key: clientKey
 	wsMutex       sync.RWMutex
 )
@@ -189,7 +186,7 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 	return wsClientInfo
 }
 
-func handleClientHeartbeat(clientInfo *WebSocketClientInfo, msg WebSocketMessage) {
+func handleClientHeartbeat(clientInfo *WebSocketClientInfo, _ WebSocketMessage) {
 	if clientInfo == nil {
 		return
 	}
