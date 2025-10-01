@@ -4,7 +4,7 @@
 /* CSS Variables for theming */
 
 /* Default theme */
-:root {
+[data-theme="default"] {
     --bg-primary: #1a1e23;
     --bg-secondary: rgba(40, 50, 60, 0.65);
     --bg-tertiary: rgba(35, 42, 51, 0.9);

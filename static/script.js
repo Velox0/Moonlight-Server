@@ -4,20 +4,14 @@ let ws = null;
 const THEMES = ['default', 'light', 'midnight'];
 
 // Get saved theme or default if none
-let currentTheme = localStorage.getItem('theme') || 'default';
+let currentTheme = localStorage.getItem('theme') || 'midnight';
 
 function applyTheme(theme) {
     const htmlEl = document.documentElement;
-    if (theme === 'default') {
-        htmlEl.removeAttribute('data-theme');
-    } else {
-        htmlEl.setAttribute('data-theme', theme);
-    }
+    htmlEl.setAttribute('data-theme', theme);
 }
 
 function setTheme(theme) {
-    console.log('setTheme called with:', theme);
-
     applyTheme(theme);
 
     currentTheme = theme;
@@ -26,8 +20,6 @@ function setTheme(theme) {
     const themeToggle = document.getElementById('theme-toggle');
     const themeIcon = themeToggle ? themeToggle.querySelector('.theme-icon') : null;
 
-    // Update theme icon based on theme
-    // You can customize these icons for your preference
     if (theme === 'light') {
         if (themeIcon) themeIcon.textContent = '☀️';
     } else if (theme === 'midnight') {
@@ -35,22 +27,6 @@ function setTheme(theme) {
     } else {
         if (themeIcon) themeIcon.textContent = '🌙';
     }
-
-    // Update debug indicator
-    const themeDebug = document.getElementById('theme-debug');
-    if (themeDebug) {
-        themeDebug.textContent = `Theme: ${theme}`;
-        // Color mapping for debug background to differentiate themes
-        if (theme === 'light') {
-            themeDebug.style.background = 'black';
-        } else if (theme === 'midnight') {
-            themeDebug.style.background = '#222244';
-        } else {
-            themeDebug.style.background = 'darkred';
-        }
-    }
-
-    console.log('Theme set successfully to:', theme);
 }
 
 // Cycle themes when toggling
@@ -231,7 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(fetchClients, 3000);
     setInterval(fetchRegions, 30000); // Refresh regions every 30 seconds
 
-    initMonitorCharts();
-    fetchMonitorData();
-    setInterval(fetchMonitorData, 1500);
+    try {
+        initMonitorCharts();
+        startMonitoring();
+    } catch (error) {
+        console.error('Error initializing monitor:', error);
+    }
 });
