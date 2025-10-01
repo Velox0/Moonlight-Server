@@ -8,8 +8,10 @@ import (
 )
 
 var config *Config
+var Version = "dev"
 
 func main() {
+	fmt.Println("moonlight-server version:", Version)
 	// Load config - try local file first, then system location
 	configPaths := []string{"mls.json", "/etc/moonlight/mls.json"}
 	var cfg *Config
@@ -37,7 +39,6 @@ func main() {
 	if cfg.WS.Enabled {
 		http.HandleFunc(cfg.WS.Path, wsHeartbeatHandler)
 		startConnectionHealthChecker()
-		fmt.Printf("WebSocket enabled on path: %s\n", cfg.WS.Path)
 	}
 
 	// Client table endpoint
