@@ -97,6 +97,11 @@ async function fetchClients() {
         });
         const data = await response.json();
         const clientList = document.getElementById('client-list');
+        if (data === null) {
+            clientList.innerHTML = '<p>No clients connected</p>';
+            document.getElementById('client-count').textContent = '0';
+            return;
+        }
         if (!data.length) {
             clientList.innerHTML = '<p>No clients connected</p>';
             document.getElementById('client-count').textContent = '0';
@@ -163,7 +168,16 @@ async function fetchClients() {
         clientList.innerHTML = html;
     } catch (e) {
         console.error('Error fetching clients:', e);
-        document.getElementById('client-list').innerHTML = '<p>Error loading clients</p>';
+        document.getElementById('client-list').innerHTML = `<table class="clients-table">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Node ID</th>
+                <th>Protocol</th>
+                <th>Last Seen</th>
+            </tr>
+        </thead>
+        <tbody>`;
     }
 }
 
