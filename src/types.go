@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -48,3 +50,55 @@ var (
 		sync.RWMutex
 	}{}
 )
+
+// Clients
+
+// Protocol represents the communication protocol used by a client
+type Protocol int
+
+const (
+	ProtocolHTTP Protocol = iota
+	ProtocolWS
+)
+
+// MarshalJSON implements json.Marshaler interface
+func (p Protocol) MarshalJSON() ([]byte, error) {
+	switch p {
+	case ProtocolHTTP:
+		return json.Marshal("http")
+	case ProtocolWS:
+		return json.Marshal("ws")
+	default:
+		return json.Marshal("unknown")
+	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler interface
+func (p Protocol) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	switch s {
+	case "http":
+		p = ProtocolHTTP
+	case "ws":
+		p = ProtocolWS
+	default:
+		return fmt.Errorf("unknown protocol: %s", s)
+	}
+	return nil
+}
+
+type ClientInfo struct {
+	IP         string
+	NodeID     string
+	Token      string
+	Region     string
+	Port       int
+	LastSeen   time.Time
+	AvgLatency time.Duration
+	Valid      bool
+	Protocol   Protocol
+	Mutex      sync.Mutex
+}
