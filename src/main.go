@@ -12,6 +12,13 @@ var Version = "dev"
 
 func main() {
 	fmt.Println("moonlight-server version:", Version)
+
+	for _, arg := range os.Args[1:] {
+		if arg == "-v" || arg == "--version" {
+			os.Exit(0)
+		}
+	}
+
 	// Load config - try local file first, then system location
 	configPaths := []string{"mls.json", "/etc/moonlight/mls.json"}
 	var cfg *Config
@@ -55,11 +62,6 @@ func main() {
 		// Serve static files
 		fs := http.FileServer(http.Dir("static"))
 		http.Handle(cfg.HTML.StaticPath+"/", http.StripPrefix(cfg.HTML.StaticPath, fs))
-
-		// Serve dashboard
-		http.HandleFunc(cfg.HTML.DashboardPath, func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "static/index.html")
-		})
 
 		// Serve index page
 		http.HandleFunc(cfg.HTML.IndexPath, func(w http.ResponseWriter, r *http.Request) {
