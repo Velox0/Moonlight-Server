@@ -158,19 +158,6 @@ cd clients/js
 node node-client.js
 ```
 
-#### Client Configuration
-Set environment variables for client configuration:
-```bash
-export MLS_HOST=localhost
-export MLS_PORT=8080
-export MLS_TOKEN=supersecrettoken1
-export MLS_REGION=us-east-1
-export MLS_NODE_ID=my-node-1
-export CLIENT_PORT=3000
-```
-
-
-
 ### Notes
 - "global", "default", or empty region match any client
 - If multiple clients match, the most recently seen with lowest latency is preferred
