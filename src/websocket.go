@@ -39,6 +39,18 @@ type WebSocketMessage struct {
 	TaskID  string          `json:"task_id,omitempty"`
 }
 
+func setWSWriteDeadline(conn *websocket.Conn) {
+	if config == nil {
+		return
+	}
+	_ = conn.SetWriteDeadline(time.Now().Add(time.Duration(config.WS.WriteTimeout) * time.Second))
+}
+
+func writeWSMessage(conn *websocket.Conn, message WebSocketMessage) error {
+	setWSWriteDeadline(conn)
+	return conn.WriteJSON(message)
+}
+
 // WebSocket heartbeat handler
 func wsHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	if !config.WS.Enabled {
@@ -95,6 +107,13 @@ func checkWebSocketConnections() {
 func handleWebSocketConnection(conn *websocket.Conn) {
 	var clientInfo *WebSocketClientInfo
 	for {
+		if config != nil {
+			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(config.WS.ReadTimeout) * time.Second)); err != nil {
+				log.Printf("Failed to set read deadline: %v", err)
+				break
+			}
+		}
+
 		var msg WebSocketMessage
 		err := conn.ReadJSON(&msg)
 		if err != nil {
@@ -181,7 +200,9 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 		Type:    "registered",
 		Payload: json.RawMessage(`{"status": "ok"}`),
 	}
-	wsClientInfo.Conn.WriteJSON(response)
+	if err := writeWSMessage(wsClientInfo.Conn, response); err != nil {
+		log.Printf("Failed to send registered ack to client %s: %v", key, err)
+	}
 	log.Printf("Client registered via WebSocket: %s", key)
 	return wsClientInfo
 }
@@ -199,7 +220,9 @@ func handleClientHeartbeat(clientInfo *WebSocketClientInfo, _ WebSocketMessage) 
 		Type:    "heartbeat_ack",
 		Payload: json.RawMessage(`{"timestamp": "` + now.Format(time.RFC3339) + `"}`),
 	}
-	clientInfo.Conn.WriteJSON(response)
+	if err := writeWSMessage(clientInfo.Conn, response); err != nil {
+		log.Printf("Failed to send heartbeat ack to client %s: %v", clientKey(clientInfo.IP, clientInfo.NodeID), err)
+	}
 	log.Printf("Heartbeat from client %s", clientKey(clientInfo.IP, clientInfo.NodeID))
 }
 
@@ -223,7 +246,9 @@ func sendError(conn *websocket.Conn, message string) {
 		Type:    "error",
 		Payload: json.RawMessage(`{"message": "` + message + `"}`),
 	}
-	conn.WriteJSON(response)
+	if err := writeWSMessage(conn, response); err != nil {
+		log.Printf("Failed to send websocket error response: %v", err)
+	}
 }
 
 func sendTaskToClient(client *ClientInfo, task Task) error {
@@ -242,7 +267,7 @@ func sendTaskToClient(client *ClientInfo, task Task) error {
 		TaskID:  task.ID,
 		Payload: json.RawMessage(task.Payload),
 	}
-	err := wsClientInfo.Conn.WriteJSON(taskMsg)
+	err := writeWSMessage(wsClientInfo.Conn, taskMsg)
 	if err != nil {
 		wsClientInfo.Connected = false
 		log.Printf("Failed to send task to client %s: %v", key, err)
