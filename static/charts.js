@@ -176,7 +176,7 @@ function initMonitorCharts() {
 
 async function fetchMonitorData() {
     try {
-        const resp = await fetch('/monitor');
+        const resp = await fetch('/api/monitor');
         if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
         const data = await resp.json();
 
@@ -187,7 +187,7 @@ async function fetchMonitorData() {
             updateCharts(data);
         }
     } catch (e) {
-        console.error('Error fetching /monitor:', e);
+        console.error('Error fetching /api/monitor:', e);
     }
 }
 

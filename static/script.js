@@ -69,7 +69,7 @@ function initWebSocket() {
 
 async function fetchRegions() {
     try {
-        const response = await fetch('/region');
+        const response = await fetch('/api/region');
         const data = await response.json();
         const regionSelect = document.getElementById('region');
 
@@ -86,13 +86,13 @@ async function fetchRegions() {
             }
         });
     } catch (e) {
-        console.error('Error fetching regions:', e);
+        console.error('Error fetching /api/regions:', e);
     }
 }
 
 async function fetchClients() {
     try {
-        const response = await fetch('/clients/table', {
+        const response = await fetch('/api/clients', {
             headers: { 'Accept': 'application/json' }
         });
         const data = await response.json();

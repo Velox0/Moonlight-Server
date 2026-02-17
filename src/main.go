@@ -49,13 +49,13 @@ func main() {
 	}
 
 	// Client table endpoint
-	http.HandleFunc("/clients/table", clientsTableHandler)
+	http.HandleFunc("/api/clients", clientsTableHandler)
 
 	// Region endpoint
-	http.HandleFunc("/region", regionListHandler)
+	http.HandleFunc("/api/region", regionListHandler)
 
 	// New monitor endpoint
-	http.HandleFunc("/monitor", monitorHandler)
+	http.HandleFunc("/api/monitor", monitorHandler)
 
 	// HTML dashboard (only if enabled)
 	if cfg.HTML.Enabled {
