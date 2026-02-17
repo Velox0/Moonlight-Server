@@ -99,17 +99,44 @@ func startConnectionHealthChecker() {
 
 func checkWebSocketConnections() {
 	wsMutex.Lock()
-	defer wsMutex.Unlock()
 	now := time.Now()
 	timeout := time.Duration(config.WS.ReadTimeout) * time.Second
+	var staleClients []*WebSocketClientInfo
+	var staleKeys []string
 	for key, wsClient := range wsConnections {
 		if !wsClient.Connected || now.Sub(wsClient.LastHeartbeat) > timeout {
 			wsClient.Connected = false
 			wsClient.Conn.Close()
 			delete(wsConnections, key)
-			log.Printf("Removed disconnected/timed-out client: %s", key)
+			staleClients = append(staleClients, wsClient)
+			staleKeys = append(staleKeys, key)
 		}
 	}
+	wsMutex.Unlock()
+
+	for idx, key := range staleKeys {
+		cleanupDisconnectedWSClient(staleClients[idx], key)
+		log.Printf("Removed disconnected/timed-out client: %s", key)
+	}
+}
+
+func cleanupDisconnectedWSClient(wsClient *WebSocketClientInfo, key string) {
+	if wsClient != nil {
+		wsClient.Mutex.Lock()
+		wsClient.Valid = false
+		wsClient.Mutex.Unlock()
+	}
+
+	clientsMutex.Lock()
+	if existing, exists := clients[key]; exists {
+		existing.Mutex.Lock()
+		isWS := existing.Protocol == ProtocolWS
+		existing.Mutex.Unlock()
+		if isWS {
+			delete(clients, key)
+		}
+	}
+	clientsMutex.Unlock()
 }
 
 // Handles a WebSocket connection
@@ -131,9 +158,7 @@ func handleWebSocketConnection(conn *websocket.Conn) {
 				wsMutex.Lock()
 				delete(wsConnections, key)
 				wsMutex.Unlock()
-				clientInfo.Mutex.Lock()
-				clientInfo.Valid = false
-				clientInfo.Mutex.Unlock()
+				cleanupDisconnectedWSClient(clientInfo, key)
 				log.Printf("Client disconnected: %s", key)
 			}
 			break
@@ -169,20 +194,7 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 	remoteIP := websocketRemoteIP(conn)
 
 	clientsMutex.Lock()
-	nodeID := ""
-	for _, existingClient := range clients {
-		existingClient.Mutex.Lock()
-		matchesWSIdentity := existingClient.IP == remoteIP && existingClient.Token == req.Token && existingClient.Protocol == ProtocolWS
-		if matchesWSIdentity {
-			nodeID = existingClient.NodeID
-			existingClient.Mutex.Unlock()
-			break
-		}
-		existingClient.Mutex.Unlock()
-	}
-	if nodeID == "" {
-		nodeID = assignNodeID()
-	}
+	nodeID := assignNodeID()
 
 	key := clientKey(remoteIP, nodeID)
 	client, exists := clients[key]

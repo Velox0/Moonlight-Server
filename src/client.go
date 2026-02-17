@@ -25,16 +25,20 @@ func clientKey(ip, nodeID string) string {
 }
 
 func assignNodeID() string {
-	var bytes [8]byte
-	if _, err := rand.Read(bytes[:]); err == nil {
-		return hex.EncodeToString(bytes[:])
-	}
-
 	nodeIDMutex.Lock()
 	id := nodeIDCounter
 	nodeIDCounter++
 	nodeIDMutex.Unlock()
-	return fmt.Sprintf("auto-%d", id)
+
+	timestampHex := fmt.Sprintf("%x", time.Now().UnixNano())
+	counterHex := fmt.Sprintf("%x", id)
+
+	var randBytes [4]byte
+	if _, err := rand.Read(randBytes[:]); err == nil {
+		return timestampHex + counterHex + hex.EncodeToString(randBytes[:])
+	}
+
+	return timestampHex + counterHex
 }
 
 // Client heartbeat handler (HTTP)
