@@ -75,8 +75,9 @@ All endpoints use/return JSON.
 
 - **POST `/client/heartbeat`** - Register client
 - **POST `/task/request`** - Submit task for processing
-- **GET `/clients/table`** - Get connected clients list
-- **GET `/region`** - Get available regions list
+- **GET `/api/clients`** - Get connected clients list
+- **GET `/api/region`** - Get available regions list
+- **GET `/api/monitor`** - Runtime/server metrics
 
 ### WebSocket API
 
