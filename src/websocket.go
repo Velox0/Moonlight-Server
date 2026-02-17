@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -49,6 +50,14 @@ func setWSWriteDeadline(conn *websocket.Conn) {
 func writeWSMessage(conn *websocket.Conn, message WebSocketMessage) error {
 	setWSWriteDeadline(conn)
 	return conn.WriteJSON(message)
+}
+
+func websocketRemoteIP(conn *websocket.Conn) string {
+	host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+	if err != nil {
+		return conn.RemoteAddr().String()
+	}
+	return host
 }
 
 // WebSocket heartbeat handler
@@ -145,14 +154,11 @@ func handleWebSocketConnection(conn *websocket.Conn) {
 
 func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSocketClientInfo {
 	var req struct {
-		IP     string `json:"ip"`
-		NodeID string `json:"node_id"`
 		Token  string `json:"token"`
 		Region string `json:"region"`
-		Port   int    `json:"port"`
 	}
 	err := json.Unmarshal(msg.Payload, &req)
-	if err != nil || req.IP == "" || req.Region == "" || req.Token == "" {
+	if err != nil || req.Region == "" || req.Token == "" {
 		sendError(conn, "invalid registration request")
 		return nil
 	}
@@ -160,24 +166,36 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 		sendError(conn, "unauthorized token")
 		return nil
 	}
-	if req.Port == 0 {
-		req.Port = 3000
-	}
-	if req.NodeID == "" {
-		req.NodeID = assignNodeID()
-	}
-	key := clientKey(req.IP, req.NodeID)
+	remoteIP := websocketRemoteIP(conn)
+
 	clientsMutex.Lock()
+	nodeID := ""
+	for _, existingClient := range clients {
+		existingClient.Mutex.Lock()
+		matchesWSIdentity := existingClient.IP == remoteIP && existingClient.Token == req.Token && existingClient.Protocol == ProtocolWS
+		if matchesWSIdentity {
+			nodeID = existingClient.NodeID
+			existingClient.Mutex.Unlock()
+			break
+		}
+		existingClient.Mutex.Unlock()
+	}
+	if nodeID == "" {
+		nodeID = assignNodeID()
+	}
+
+	key := clientKey(remoteIP, nodeID)
 	client, exists := clients[key]
 	if !exists {
 		client = &ClientInfo{
-			IP: req.IP, NodeID: req.NodeID, Token: req.Token,
-			Region: req.Region, Port: req.Port, Valid: true, Protocol: ProtocolWS,
+			IP: remoteIP, NodeID: nodeID, Token: req.Token,
+			Region: req.Region, Valid: true, Protocol: ProtocolWS,
 		}
 		clients[key] = client
 	} else {
 		client.Mutex.Lock()
-		client.Region, client.Token, client.Port, client.Valid = req.Region, req.Token, req.Port, true
+		client.Region, client.Token, client.Valid = req.Region, req.Token, true
+		client.IP = remoteIP
 		client.Protocol = ProtocolWS
 		client.Mutex.Unlock()
 	}
@@ -196,9 +214,17 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 	wsMutex.Lock()
 	wsConnections[key] = wsClientInfo
 	wsMutex.Unlock()
+
+	registeredPayload, marshalErr := json.Marshal(map[string]string{
+		"status":  "ok",
+		"node_id": client.NodeID,
+	})
+	if marshalErr != nil {
+		registeredPayload = json.RawMessage(`{"status": "ok"}`)
+	}
 	response := WebSocketMessage{
 		Type:    "registered",
-		Payload: json.RawMessage(`{"status": "ok"}`),
+		Payload: registeredPayload,
 	}
 	if err := writeWSMessage(wsClientInfo.Conn, response); err != nil {
 		log.Printf("Failed to send registered ack to client %s: %v", key, err)

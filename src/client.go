@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,6 +25,11 @@ func clientKey(ip, nodeID string) string {
 }
 
 func assignNodeID() string {
+	var bytes [8]byte
+	if _, err := rand.Read(bytes[:]); err == nil {
+		return hex.EncodeToString(bytes[:])
+	}
+
 	nodeIDMutex.Lock()
 	id := nodeIDCounter
 	nodeIDCounter++

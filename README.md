@@ -4,10 +4,10 @@
   <img src="images/banner.png" alt="Moonlight Server Dashboard" width="800" style="border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);" />
 </p>
 
-
 A lightweight HTTP JSON proxy that selects a registered client by region and forwards your payload, returning the client's response as-is. Supports both HTTP and WebSocket communication with a modern web dashboard for monitoring and management.
 
 ### Features
+
 - Token-gated client registration with secure authentication
 - Region-aware client selection with hierarchical fallback
 - Simple load balancing by recency and latency
@@ -19,6 +19,7 @@ A lightweight HTTP JSON proxy that selects a registered client by region and for
 - Dynamic region selection via API endpoint
 
 ### Quick Start
+
 ```bash
 make build
 ./build/moonlight-server
@@ -27,6 +28,7 @@ make run
 ```
 
 Copy config to the default path:
+
 ```bash
 sudo mkdir -p /etc/moonlight
 sudo cp mls.json /etc/moonlight/mls.json
@@ -35,7 +37,9 @@ sudo cp mls.json /etc/moonlight/mls.json
 The server listens on `:8080` by default.
 
 ### Configuration
+
 Minimal `/etc/moonlight/mls.json`:
+
 ```json
 {
   "tokens": ["supersecrettoken1"],
@@ -65,9 +69,8 @@ Minimal `/etc/moonlight/mls.json`:
 }
 ```
 
-
-
 ### HTTP API
+
 All endpoints use/return JSON.
 
 - **POST `/client/heartbeat`** - Register client
@@ -76,25 +79,37 @@ All endpoints use/return JSON.
 - **GET `/region`** - Get available regions list
 
 ### WebSocket API
+
 Connect to `ws://server:port/ws` for real-time communication.
 
 #### Message Types
 
 **Client Registration:**
+
 ```json
 {
   "type": "register",
   "payload": {
-    "ip": "1.2.3.4",
-    "node_id": "node-1", 
     "token": "supersecrettoken1",
-    "region": "us-east-1",
-    "port": 3000
+    "region": "us-east-1"
+  }
+}
+```
+
+**Registered Ack (from server):**
+
+```json
+{
+  "type": "registered",
+  "payload": {
+    "status": "ok",
+    "node_id": "a1b2c3d4e5f60789"
   }
 }
 ```
 
 **Heartbeat:**
+
 ```json
 {
   "type": "heartbeat",
@@ -105,23 +120,25 @@ Connect to `ws://server:port/ws` for real-time communication.
 ```
 
 **Task (from server to client):**
+
 ```json
 {
   "type": "task",
   "task_id": "abc123",
-  "payload": {"any": "json"}
+  "payload": { "any": "json" }
 }
 ```
 
 **Task Response (from client to server):**
+
 ```json
 {
   "type": "task_response",
   "payload": {
     "task_id": "abc123",
-    "response": {"result": "data"},
+    "response": { "result": "data" },
     "status": 200,
-    "headers": {"Content-Type": "application/json"}
+    "headers": { "Content-Type": "application/json" }
   }
 }
 ```
@@ -139,6 +156,7 @@ Access at `http://server:port/` or `http://server:port/dashboard`
 ### Clients
 
 #### Node.js WebSocket Client
+
 ```bash
 cd clients/js
 npm install
@@ -146,6 +164,7 @@ node websocket-client.js
 ```
 
 #### Python WebSocket Client
+
 ```bash
 cd clients/python
 pip install -r requirements.txt
@@ -153,12 +172,13 @@ python websocket-client.py
 ```
 
 #### Node.js HTTP Client (Legacy)
+
 ```bash
 cd clients/js
 node node-client.js
 ```
 
 ### Notes
+
 - "global", "default", or empty region match any client
 - If multiple clients match, the most recently seen with lowest latency is preferred
-
