@@ -1,89 +1,164 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Moonlight Server Dashboard</title>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link rel="stylesheet" href="/static/style.css">
-</head>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
 
-<body>
+  <body>
     <div class="container" role="main" aria-label="Moonlight Server Dashboard">
-        <h1 class="dashboard-tech-term">
-            <span class="sym">[</span> MOONLIGHT <span class="sym">]</span>
-            <span class="sub-label">// SERVER DASHBOARD</span>
-        </h1>
+      <h1 class="dashboard-tech-term">
+        <span class="sym">[</span> MOONLIGHT <span class="sym">]</span>
+        <span class="sub-label">// SERVER DASHBOARD</span>
+      </h1>
 
-        <!-- JSON formatted status block -->
-        <div class="status-json-wrapper" aria-live="polite" aria-atomic="true" role="region"
-            aria-label="Status Information">
-            <span class="status-json-brace">{</span>
-            <table class="status-json" cellpadding="6" cellspacing="0">
-                <tbody>
-                    <tr>
-                        <td>server</td>
-                        <td><span id="server-status" class="status-online">Loading...</span></td>
-                    </tr>
-                    <tr>
-                        <td>websocket</td>
-                        <td><span id="ws-status" class="status-connected">Connecting...</span></td>
-                    </tr>
-                    <tr>
-                        <td>clients</td>
-                        <td><span id="client-count" class="status-num">0</span></td>
-                    </tr>
-                </tbody>
-            </table>
+      <!-- JSON formatted status block -->
+      <div
+        class="status-json-wrapper"
+        aria-live="polite"
+        aria-atomic="true"
+        role="region"
+        aria-label="Status Information"
+      >
+        <span class="status-json-brace">{</span>
+        <table class="status-json" cellpadding="6" cellspacing="0">
+          <tbody>
+            <tr>
+              <td>server</td>
+              <td>
+                <span id="server-status" class="status-online">Loading...</span>
+              </td>
+            </tr>
+            <tr>
+              <td>websocket</td>
+              <td>
+                <span id="ws-status" class="status-connected"
+                  >Connecting...</span
+                >
+              </td>
+            </tr>
+            <tr>
+              <td>clients</td>
+              <td><span id="client-count" class="status-num">0</span></td>
+            </tr>
+          </tbody>
+        </table>
 
-            <span class="status-json-brace">}</span>
+        <span class="status-json-brace">}</span>
+      </div>
+
+      <div class="content-grid">
+        <section class="client-list" aria-label="Connected Clients">
+          <h3>Connected Clients</h3>
+          <div id="client-list">
+            <p>Loading clients...</p>
+          </div>
+        </section>
+        <section class="test-section" aria-label="Send Test Task">
+          <h3>Send Test Task</h3>
+          <form id="task-form">
+            <label for="region">Region:</label>
+            <select id="region" aria-required="true">
+              <option value="global">Global (Any Region)</option>
+            </select>
+            <label for="payload">Payload (JSON):</label>
+            <textarea
+              id="payload"
+              aria-required="true"
+              placeholder='{"test": "data"}'
+            >
+{"test": "data", "message": "Hello from dashboard!"}</textarea
+            >
+            <button type="submit" class="submit-button">Send Task</button>
+          </form>
+          <div
+            id="task-result"
+            role="region"
+            aria-live="polite"
+            aria-atomic="true"
+          ></div>
+
+          <div id="admin-actions" class="admin-actions" style="display: none">
+            <button id="reload-config-btn" type="button" class="submit-button">
+              Reload Config
+            </button>
+            <button
+              id="logout-btn"
+              type="button"
+              class="submit-button logout-btn"
+            >
+              Logout
+            </button>
+          </div>
+          <div id="not-logged-in" class="admin-actions">
+            <button id="show-login-btn" type="button" class="submit-button">
+              Admin Login
+            </button>
+          </div>
+          <div
+            id="reload-result"
+            role="region"
+            aria-live="polite"
+            aria-atomic="true"
+          ></div>
+        </section>
+        <div class="monitor-section">
+          <h3>Memory Usage</h3>
+          <canvas id="memoryChart" width="600" height="200"></canvas>
+          <h3>Connected Clients Over Time</h3>
+          <canvas id="clientsChart" width="600" height="200"></canvas>
         </div>
 
-        <div class="content-grid">
-            <section class="client-list" aria-label="Connected Clients">
-                <h3>Connected Clients</h3>
-                <div id="client-list">
-                    <p>Loading clients...</p>
-                </div>
-            </section>
-            <section class="test-section" aria-label="Send Test Task">
-                <h3>Send Test Task</h3>
-                <form id="task-form">
-                    <label for="region">Region:</label>
-                    <select id="region" aria-required="true">
-                        <option value="global">Global (Any Region)</option>
-                    </select>
-                    <label for="payload">Payload (JSON):</label>
-                    <textarea id="payload" aria-required="true"
-                        placeholder='{"test": "data"}'>{"test": "data", "message": "Hello from dashboard!"}</textarea>
-                    <button type="submit" class="submit-button">Send Task</button>
-                </form>
-                <div id="task-result" role="region" aria-live="polite" aria-atomic="true"></div>
-            </section>
-            <div class="monitor-section">
-                <h3>Memory Usage</h3>
-                <canvas id="memoryChart" width="600" height="200"></canvas>
-                <h3>Connected Clients Over Time</h3>
-                <canvas id="clientsChart" width="600" height="200"></canvas>
-            </div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      </div>
+      <script src="/static/charts.js"></script>
+      <script src="/static/script.js"></script>
+      <div style="margin: 50px; width: 100%; text-align: center">
+        <a href="https://github.com/velox0/Moonlight-Server">GitHub</a> |
+        <a href="https://velox0.com">Contact</a>
+      </div>
+    </div>
 
-            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-        </div>
-        <script src="/static/charts.js"></script>
-        <script src="/static/script.js"></script>
-        <div style="margin: 50px; width: 100%; text-align: center;"><a
-                href="https://github.com/velox0/Moonlight-Server">GitHub</a> | <a href="https://velox0.com">Contact</a>
-        </div>
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay" style="display: none">
+      <div class="login-box">
+        <h2>Admin Login</h2>
+        <form id="login-form">
+          <label for="login-token">Token:</label>
+          <input
+            id="login-token"
+            type="password"
+            placeholder="Enter server token"
+            autocomplete="off"
+            required
+          />
+          <div id="login-error" class="login-error"></div>
+          <div class="login-buttons">
+            <button type="submit" class="submit-button">Login</button>
+            <button
+              type="button"
+              id="login-cancel-btn"
+              class="submit-button logout-btn"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- Theme Toggle Button - Right Edge Tab -->
     <div class="theme-toggle-tab">
-        <button id="theme-toggle" class="theme-toggle-tab-btn" aria-label="Toggle theme">
-            <span class="theme-icon">🌙</span>
-        </button>
+      <button
+        id="theme-toggle"
+        class="theme-toggle-tab-btn"
+        aria-label="Toggle theme"
+      >
+        <span class="theme-icon">🌙</span>
+      </button>
     </div>
-</body>
-
+  </body>
 </html>

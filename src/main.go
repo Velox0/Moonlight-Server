@@ -14,15 +14,26 @@ var Version = "dev"
 
 func configReloadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		log.Printf("Config reload denied: method=%s remote=%s", r.Method, r.RemoteAddr)
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Require a valid session
+	if !getSessionFromRequest(r) {
+		log.Printf("Config reload denied: not authenticated remote=%s", r.RemoteAddr)
+		http.Error(w, `{"error":"not authenticated"}`, http.StatusUnauthorized)
 		return
 	}
 
 	path, err := reloadConfig()
 	if err != nil {
+		log.Printf("Config reload denied: remote=%s error=%v", r.RemoteAddr, err)
 		http.Error(w, fmt.Sprintf("failed to reload config: %v", err), http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("Config reloaded from %s (HTTP) remote=%s", path, r.RemoteAddr)
 
 	cfg := getConfig()
 	w.Header().Set("Content-Type", "application/json")
@@ -80,9 +91,15 @@ func main() {
 	fmt.Printf("Loaded config from: %s\n", loadedPath)
 	startConfigSignalWatcher()
 
+	// Session cleanup
+	cleanExpiredSessions()
+
 	// Handlers
 	http.HandleFunc("/api/heartbeat", clientHeartbeatHandler)
 	http.HandleFunc("/api/request", taskRequestHandler)
+	http.HandleFunc("/api/admin/login", loginHandler)
+	http.HandleFunc("/api/admin/logout", logoutHandler)
+	http.HandleFunc("/api/admin/session", sessionCheckHandler)
 	http.HandleFunc("/api/admin/reload", configReloadHandler)
 
 	// WebSocket handler (only if enabled)

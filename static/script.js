@@ -1,115 +1,118 @@
 let ws = null;
 
 // Supported themes in cycle order
-const THEMES = ['default', 'light', 'midnight'];
+const THEMES = ["default", "light", "midnight"];
 
 // Get saved theme or default if none
-let currentTheme = localStorage.getItem('theme') || 'midnight';
+let currentTheme = localStorage.getItem("theme") || "midnight";
 
 function applyTheme(theme) {
-    const htmlEl = document.documentElement;
-    htmlEl.setAttribute('data-theme', theme);
+  const htmlEl = document.documentElement;
+  htmlEl.setAttribute("data-theme", theme);
 }
 
 function setTheme(theme) {
-    applyTheme(theme);
+  applyTheme(theme);
 
-    currentTheme = theme;
-    localStorage.setItem('theme', theme);
+  currentTheme = theme;
+  localStorage.setItem("theme", theme);
 
-    const themeToggle = document.getElementById('theme-toggle');
-    const themeIcon = themeToggle ? themeToggle.querySelector('.theme-icon') : null;
+  const themeToggle = document.getElementById("theme-toggle");
+  const themeIcon = themeToggle
+    ? themeToggle.querySelector(".theme-icon")
+    : null;
 
-    if (theme === 'light') {
-        if (themeIcon) themeIcon.textContent = '☀️';
-    } else if (theme === 'midnight') {
-        if (themeIcon) themeIcon.textContent = '🌌';
-    } else {
-        if (themeIcon) themeIcon.textContent = '🌙';
-    }
+  if (theme === "light") {
+    if (themeIcon) themeIcon.textContent = "☀️";
+  } else if (theme === "midnight") {
+    if (themeIcon) themeIcon.textContent = "🌌";
+  } else {
+    if (themeIcon) themeIcon.textContent = "🌙";
+  }
 }
 
 // Cycle themes when toggling
 function toggleTheme() {
-    console.log('toggleTheme called, currentTheme:', currentTheme);
-    let currentIndex = THEMES.indexOf(currentTheme);
-    if (currentIndex === -1) currentIndex = 0;
-    const newIndex = (currentIndex + 1) % THEMES.length;
-    const newTheme = THEMES[newIndex];
-    console.log('Switching to theme:', newTheme);
-    setTheme(newTheme);
+  console.log("toggleTheme called, currentTheme:", currentTheme);
+  let currentIndex = THEMES.indexOf(currentTheme);
+  if (currentIndex === -1) currentIndex = 0;
+  const newIndex = (currentIndex + 1) % THEMES.length;
+  const newTheme = THEMES[newIndex];
+  console.log("Switching to theme:", newTheme);
+  setTheme(newTheme);
 }
 
 function updateWebSocketStatus(text, online) {
-    const wsStatusEl = document.getElementById('ws-status');
-    wsStatusEl.textContent = text;
+  const wsStatusEl = document.getElementById("ws-status");
+  wsStatusEl.textContent = text;
 }
 
 function initWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
 
-    ws = new WebSocket(wsUrl);
+  ws = new WebSocket(wsUrl);
 
-    ws.onopen = function () {
-        updateWebSocketStatus('Connected', true);
-        console.log('WebSocket connected');
-    };
-    ws.onclose = function () {
-        updateWebSocketStatus('Disconnected', false);
-        console.log('WebSocket disconnected');
-        // Reconnect
-        setTimeout(initWebSocket, 5000);
-    };
-    ws.onerror = function (err) {
-        updateWebSocketStatus('Error', false);
-        console.error('WebSocket error:', err);
-    };
+  ws.onopen = function () {
+    updateWebSocketStatus("Connected", true);
+    console.log("WebSocket connected");
+  };
+  ws.onclose = function () {
+    updateWebSocketStatus("Disconnected", false);
+    console.log("WebSocket disconnected");
+    // Reconnect
+    setTimeout(initWebSocket, 5000);
+  };
+  ws.onerror = function (err) {
+    updateWebSocketStatus("Error", false);
+    console.error("WebSocket error:", err);
+  };
 }
 
 async function fetchRegions() {
-    try {
-        const response = await fetch('/api/region');
-        const data = await response.json();
-        const regionSelect = document.getElementById('region');
+  try {
+    const response = await fetch("/api/region");
+    const data = await response.json();
+    const regionSelect = document.getElementById("region");
 
-        // Clear existing options except the first one
-        regionSelect.innerHTML = '<option value="global">Global (Any Region)</option>';
+    // Clear existing options except the first one
+    regionSelect.innerHTML =
+      '<option value="global">Global (Any Region)</option>';
 
-        // Add region options
-        data.regions.forEach(region => {
-            if (region !== 'global') {
-                const option = document.createElement('option');
-                option.value = region;
-                option.textContent = region;
-                regionSelect.appendChild(option);
-            }
-        });
-    } catch (e) {
-        console.error('Error fetching /api/regions:', e);
-    }
+    // Add region options
+    data.regions.forEach((region) => {
+      if (region !== "global") {
+        const option = document.createElement("option");
+        option.value = region;
+        option.textContent = region;
+        regionSelect.appendChild(option);
+      }
+    });
+  } catch (e) {
+    console.error("Error fetching /api/regions:", e);
+  }
 }
 
 async function fetchClients() {
-    try {
-        const response = await fetch('/api/clients', {
-            headers: { 'Accept': 'application/json' }
-        });
-        const data = await response.json();
-        const clientList = document.getElementById('client-list');
-        if (data === null) {
-            clientList.innerHTML = '<p>No clients connected</p>';
-            document.getElementById('client-count').textContent = '0';
-            return;
-        }
-        if (!data.length) {
-            clientList.innerHTML = '<p>No clients connected</p>';
-            document.getElementById('client-count').textContent = '0';
-            return;
-        }
-        document.getElementById('client-count').textContent = data.length;
+  try {
+    const response = await fetch("/api/clients", {
+      headers: { Accept: "application/json" },
+    });
+    const data = await response.json();
+    const clientList = document.getElementById("client-list");
+    if (data === null) {
+      clientList.innerHTML = "<p>No clients connected</p>";
+      document.getElementById("client-count").textContent = "0";
+      return;
+    }
+    if (!data.length) {
+      clientList.innerHTML = "<p>No clients connected</p>";
+      document.getElementById("client-count").textContent = "0";
+      return;
+    }
+    document.getElementById("client-count").textContent = data.length;
 
-        let html = `
+    let html = `
                     <table class="clients-table">
                         <thead>
                             <tr>
@@ -121,54 +124,55 @@ async function fetchClients() {
                         </thead>
                         <tbody>`;
 
-        data.forEach(client => {
-            const isOnline = client.connected === 'connected';
-            const statusDotClass = isOnline ? 'online' : 'offline';
-            const protocolClass = client.protocol.toLowerCase();
+    data.forEach((client) => {
+      const isOnline = client.connected === "connected";
+      const statusDotClass = isOnline ? "online" : "offline";
+      const protocolClass = client.protocol.toLowerCase();
 
-            // Format date nicely
-            const date = new Date(client.last_seen);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMs / 3600000);
-            const diffDays = Math.floor(diffMs / 86400000);
+      // Format date nicely
+      const date = new Date(client.last_seen);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
 
-            let lastSeen;
-            if (diffMins < 1) {
-                lastSeen = 'Just now';
-            } else if (diffMins < 60) {
-                lastSeen = `${diffMins}m ago`;
-            } else if (diffHours < 24) {
-                lastSeen = `${diffHours}h ago`;
-            } else if (diffDays < 7) {
-                lastSeen = `${diffDays}d ago`;
-            } else {
-                lastSeen = date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            }
+      let lastSeen;
+      if (diffMins < 1) {
+        lastSeen = "Just now";
+      } else if (diffMins < 60) {
+        lastSeen = `${diffMins}m ago`;
+      } else if (diffHours < 24) {
+        lastSeen = `${diffHours}h ago`;
+      } else if (diffDays < 7) {
+        lastSeen = `${diffDays}d ago`;
+      } else {
+        lastSeen = date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
 
-            html += `
+      html += `
                         <tr>
                             <td>
                                 <span class="status-dot ${statusDotClass}"></span>
-                                ${isOnline ? 'Online' : 'Offline'}
+                                ${isOnline ? "Online" : "Offline"}
                             </td>
                             <td><strong>${client.node_id}</strong></td>
                             <td><span class="protocol-badge ${protocolClass}">${client.protocol}</span></td>
                             <td>${lastSeen}</td>
                         </tr>`;
-        });
+    });
 
-        html += '</tbody></table>';
-        clientList.innerHTML = html;
-    } catch (e) {
-        console.error('Error fetching clients:', e);
-        document.getElementById('client-list').innerHTML = `<table class="clients-table">
+    html += "</tbody></table>";
+    clientList.innerHTML = html;
+  } catch (e) {
+    console.error("Error fetching clients:", e);
+    document.getElementById("client-list").innerHTML =
+      `<table class="clients-table">
         <thead>
             <tr>
                 <th>Status</th>
@@ -178,53 +182,212 @@ async function fetchClients() {
             </tr>
         </thead>
         <tbody>`;
-    }
+  }
 }
 
-document.getElementById('task-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const region = document.getElementById('region').value;
-    const payloadText = document.getElementById('payload').value;
-    const taskResult = document.getElementById('task-result');
-    try {
-        const payload = JSON.parse(payloadText);
-        const response = await fetch('/api/request', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ region, payload })
-        });
-        const text = await response.text();
-        taskResult.innerHTML = `<h4>Response (Status: ${response.status}):</h4><pre>${text}</pre>`;
-    } catch (error) {
-        taskResult.innerHTML = `<h4>Error:</h4><pre>${error.message}</pre>`;
-    }
+document.getElementById("task-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const region = document.getElementById("region").value;
+  const payloadText = document.getElementById("payload").value;
+  const taskResult = document.getElementById("task-result");
+  try {
+    const payload = JSON.parse(payloadText);
+    const response = await fetch("/api/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ region, payload }),
+    });
+    const text = await response.text();
+    taskResult.innerHTML = `<h4>Response (Status: ${response.status}):</h4><pre>${text}</pre>`;
+  } catch (error) {
+    taskResult.innerHTML = `<h4>Error:</h4><pre>${error.message}</pre>`;
+  }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing theme system...');
+async function reloadConfig() {
+  const reloadBtn = document.getElementById("reload-config-btn");
+  const reloadResult = document.getElementById("reload-result");
 
-    // Initialize theme on page load
-    setTheme(currentTheme);
+  if (!reloadBtn || !reloadResult) {
+    return;
+  }
 
-    // Add theme toggle event listener
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) themeToggle.addEventListener('mousedown', toggleTheme);
+  const originalButtonText = reloadBtn.textContent;
 
-    initWebSocket();
+  try {
+    reloadBtn.disabled = true;
+    reloadBtn.textContent = "Reloading...";
 
-    const serverStatus = document.getElementById('server-status');
-    if (serverStatus) serverStatus.textContent = 'Online';
+    const response = await fetch("/api/admin/reload", {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    });
 
+    const text = await response.text();
+
+    if (response.status === 401) {
+      // Session expired
+      updateAuthUI(false);
+      reloadResult.innerHTML = `<h4>Session Expired</h4><pre>Please log in again.</pre>`;
+      return;
+    }
+
+    if (!response.ok) {
+      reloadResult.innerHTML = `<h4>Reload Failed (Status: ${response.status})</h4><pre>${text}</pre>`;
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (_) {
+      reloadResult.innerHTML = `<h4>Reloaded</h4><pre>${text}</pre>`;
+      fetchRegions();
+      fetchClients();
+      return;
+    }
+
+    reloadResult.innerHTML = `<h4>Reloaded</h4><pre>${JSON.stringify(parsed, null, 2)}</pre>`;
     fetchRegions();
     fetchClients();
+  } catch (error) {
+    reloadResult.innerHTML = `<h4>Reload Error</h4><pre>${error.message}</pre>`;
+  } finally {
+    reloadBtn.disabled = false;
+    reloadBtn.textContent = originalButtonText;
+  }
+}
 
-    setInterval(fetchClients, 3000);
-    setInterval(fetchRegions, 30000); // Refresh regions every 30 seconds
+// --- Auth / session management ---
 
-    try {
-        initMonitorCharts();
-        startMonitoring();
-    } catch (error) {
-        console.error('Error initializing monitor:', error);
+function updateAuthUI(authenticated) {
+  const adminActions = document.getElementById("admin-actions");
+  const notLoggedIn = document.getElementById("not-logged-in");
+  if (authenticated) {
+    if (adminActions) adminActions.style.display = "";
+    if (notLoggedIn) notLoggedIn.style.display = "none";
+  } else {
+    if (adminActions) adminActions.style.display = "none";
+    if (notLoggedIn) notLoggedIn.style.display = "";
+  }
+}
+
+async function checkSession() {
+  try {
+    const res = await fetch("/api/admin/session", {
+      headers: { Accept: "application/json" },
+    });
+    const data = await res.json();
+    updateAuthUI(!!data.authenticated);
+  } catch {
+    updateAuthUI(false);
+  }
+}
+
+function showLoginOverlay() {
+  const overlay = document.getElementById("login-overlay");
+  if (overlay) overlay.style.display = "flex";
+  const tokenInput = document.getElementById("login-token");
+  if (tokenInput) {
+    tokenInput.value = "";
+    tokenInput.focus();
+  }
+  const errEl = document.getElementById("login-error");
+  if (errEl) errEl.textContent = "";
+}
+
+function hideLoginOverlay() {
+  const overlay = document.getElementById("login-overlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const tokenInput = document.getElementById("login-token");
+  const errEl = document.getElementById("login-error");
+  const token = tokenInput ? tokenInput.value.trim() : "";
+
+  if (!token) {
+    if (errEl) errEl.textContent = "Token is required";
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (errEl)
+        errEl.textContent =
+          data.error || "Login failed (status " + res.status + ")";
+      return;
     }
+
+    hideLoginOverlay();
+    updateAuthUI(true);
+  } catch (error) {
+    if (errEl) errEl.textContent = error.message;
+  }
+}
+
+async function handleLogout() {
+  try {
+    await fetch("/api/admin/logout", { method: "POST" });
+  } catch {}
+  updateAuthUI(false);
+  const reloadResult = document.getElementById("reload-result");
+  if (reloadResult) reloadResult.innerHTML = "";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM loaded, initializing theme system...");
+
+  // Initialize theme on page load
+  setTheme(currentTheme);
+
+  // Add theme toggle event listener
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) themeToggle.addEventListener("mousedown", toggleTheme);
+
+  const reloadConfigButton = document.getElementById("reload-config-btn");
+  if (reloadConfigButton)
+    reloadConfigButton.addEventListener("click", reloadConfig);
+
+  const showLoginBtn = document.getElementById("show-login-btn");
+  if (showLoginBtn) showLoginBtn.addEventListener("click", showLoginOverlay);
+
+  const loginForm = document.getElementById("login-form");
+  if (loginForm) loginForm.addEventListener("submit", handleLogin);
+
+  const loginCancelBtn = document.getElementById("login-cancel-btn");
+  if (loginCancelBtn)
+    loginCancelBtn.addEventListener("click", hideLoginOverlay);
+
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+
+  // Check session status on load
+  checkSession();
+
+  initWebSocket();
+
+  const serverStatus = document.getElementById("server-status");
+  if (serverStatus) serverStatus.textContent = "Online";
+
+  fetchRegions();
+  fetchClients();
+
+  setInterval(fetchClients, 3000);
+  setInterval(fetchRegions, 30000); // Refresh regions every 30 seconds
+
+  try {
+    initMonitorCharts();
+    startMonitoring();
+  } catch (error) {
+    console.error("Error initializing monitor:", error);
+  }
 });
