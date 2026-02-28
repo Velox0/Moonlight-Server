@@ -188,7 +188,7 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
     const taskResult = document.getElementById('task-result');
     try {
         const payload = JSON.parse(payloadText);
-        const response = await fetch('/task/request', {
+        const response = await fetch('/api/request', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ region, payload })

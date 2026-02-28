@@ -39,8 +39,8 @@ func main() {
 	config = cfg
 
 	// Handlers
-	http.HandleFunc("/client/heartbeat", clientHeartbeatHandler)
-	http.HandleFunc("/task/request", taskRequestHandler)
+	http.HandleFunc("/api/heartbeat", clientHeartbeatHandler)
+	http.HandleFunc("/api/request", taskRequestHandler)
 
 	// WebSocket handler (only if enabled)
 	if cfg.WS.Enabled {

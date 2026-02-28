@@ -66,7 +66,7 @@ async function sendHeartbeat() {
             port: CLIENT_PORT,
         };
         console.log('Payload:', [payload.ip, payload.node_id, payload.token, payload.region]);
-        const res = await postJSON('/client/heartbeat', payload);
+        const res = await postJSON('/api/heartbeat', payload);
         if (res.status !== 200) {
             console.error('Heartbeat failed:', res.status, res.body);
         }
