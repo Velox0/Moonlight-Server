@@ -2,7 +2,12 @@ package main
 
 // Get parent region from hierarchy
 func getParentRegion(region string) string {
-	parent, ok := config.RegionHierarchy[region]
+	cfg := getConfig()
+	if cfg == nil || cfg.RegionHierarchy == nil {
+		return ""
+	}
+
+	parent, ok := cfg.RegionHierarchy[region]
 	if !ok {
 		return ""
 	}

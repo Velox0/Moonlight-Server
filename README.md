@@ -73,11 +73,21 @@ Minimal `/etc/moonlight/mls.json`:
 
 All endpoints use/return JSON.
 
-- **POST `/client/heartbeat`** - Register client
+- **POST `/api/heartbeat`** - Register client
 - **POST `/task/request`** - Submit task for processing
 - **GET `/api/clients`** - Get connected clients list
 - **GET `/api/region`** - Get available regions list
 - **GET `/api/monitor`** - Runtime/server metrics
+- **POST `/api/admin/reload`** - Reload config from disk without restart
+
+### Live Config Reload
+
+You can reload `mls.json` (or the first available configured path) at runtime:
+
+- HTTP: `POST /api/admin/reload`
+- Signal: send `SIGHUP` to the process
+
+Reload updates runtime config values such as tokens, region hierarchy, and WebSocket timeouts/limits.
 
 ### WebSocket API
 

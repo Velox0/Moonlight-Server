@@ -85,8 +85,9 @@ func regionListHandler(w http.ResponseWriter, r *http.Request) {
 	var regions []string
 	regions = append(regions, "global")
 
-	if config != nil && config.RegionHierarchy != nil {
-		for region := range config.RegionHierarchy {
+	cfg := getConfig()
+	if cfg != nil && cfg.RegionHierarchy != nil {
+		for region := range cfg.RegionHierarchy {
 			regions = append(regions, region)
 		}
 	}

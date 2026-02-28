@@ -1,14 +1,54 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
-var config *Config
 var Version = "dev"
+
+func configReloadHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	path, err := reloadConfig()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to reload config: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	cfg := getConfig()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":      "ok",
+		"config_path": path,
+		"port":        cfg.Port,
+		"ws_enabled":  cfg.WS.Enabled,
+		"ws_path":     cfg.WS.Path,
+	})
+}
+
+func startConfigSignalWatcher() {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGHUP)
+	go func() {
+		for range ch {
+			path, err := reloadConfig()
+			if err != nil {
+				log.Printf("Config reload failed (SIGHUP): %v", err)
+				continue
+			}
+			log.Printf("Config reloaded from %s (SIGHUP)", path)
+		}
+	}()
+}
 
 func main() {
 	fmt.Println("moonlight-server version:", Version)
@@ -19,28 +59,31 @@ func main() {
 		}
 	}
 
-	// Load config - try local file first, then system location
-	configPaths := []string{"mls.json", "/etc/moonlight/mls.json"}
-	var cfg *Config
-	var err error
+	// Load config - try local file first, then system locations
+	homeDir, err := os.UserHomeDir()
+	var configPaths []string
 
-	for _, path := range configPaths {
-		cfg, err = LoadConfig(path)
-		if err == nil {
-			fmt.Printf("Loaded config from: %s\n", path)
-			break
-		}
+	if err == nil {
+		configPaths = []string{"mls.json", homeDir + "/.config/moonlight/mls.json", "/etc/moonlight/mls.json"}
+	} else {
+		configPaths = []string{"mls.json", "/etc/moonlight/mls.json"}
 	}
+	setConfigSearchPaths(configPaths)
+
+	cfg, loadedPath, err := loadConfigFromSearchPaths()
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config from any location: %v\n", err)
 		os.Exit(1)
 	}
-	config = cfg
+	setActiveConfig(cfg, loadedPath)
+	fmt.Printf("Loaded config from: %s\n", loadedPath)
+	startConfigSignalWatcher()
 
 	// Handlers
 	http.HandleFunc("/api/heartbeat", clientHeartbeatHandler)
 	http.HandleFunc("/api/request", taskRequestHandler)
+	http.HandleFunc("/api/admin/reload", configReloadHandler)
 
 	// WebSocket handler (only if enabled)
 	if cfg.WS.Enabled {
@@ -87,5 +130,6 @@ func main() {
 		}
 		fmt.Printf("Accessible at: http://%s:%d\n", ip, cfg.Port)
 	}
+	fmt.Printf("Config reload endpoint: http://localhost:%d/api/admin/reload (POST)\n", cfg.Port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), nil))
 }

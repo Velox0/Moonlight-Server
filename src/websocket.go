@@ -41,10 +41,11 @@ type WebSocketMessage struct {
 }
 
 func setWSWriteDeadline(conn *websocket.Conn) {
-	if config == nil {
+	cfg := getConfig()
+	if cfg == nil {
 		return
 	}
-	_ = conn.SetWriteDeadline(time.Now().Add(time.Duration(config.WS.WriteTimeout) * time.Second))
+	_ = conn.SetWriteDeadline(time.Now().Add(time.Duration(cfg.WS.WriteTimeout) * time.Second))
 }
 
 func writeWSMessage(conn *websocket.Conn, message WebSocketMessage) error {
@@ -62,7 +63,8 @@ func websocketRemoteIP(conn *websocket.Conn) string {
 
 // WebSocket heartbeat handler
 func wsHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
-	if !config.WS.Enabled {
+	cfg := getConfig()
+	if cfg == nil || !cfg.WS.Enabled {
 		http.Error(w, "WebSocket is disabled", http.StatusServiceUnavailable)
 		return
 	}
@@ -70,7 +72,7 @@ func wsHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	wsMutex.RLock()
 	currentConnections := len(wsConnections)
 	wsMutex.RUnlock()
-	if currentConnections >= config.WS.MaxConnections {
+	if currentConnections >= cfg.WS.MaxConnections {
 		http.Error(w, "Maximum WebSocket connections reached", http.StatusServiceUnavailable)
 		return
 	}
@@ -82,16 +84,21 @@ func wsHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn.SetReadDeadline(time.Now().Add(time.Duration(config.WS.ReadTimeout) * time.Second))
-	conn.SetWriteDeadline(time.Now().Add(time.Duration(config.WS.WriteTimeout) * time.Second))
+	conn.SetReadDeadline(time.Now().Add(time.Duration(cfg.WS.ReadTimeout) * time.Second))
+	conn.SetWriteDeadline(time.Now().Add(time.Duration(cfg.WS.WriteTimeout) * time.Second))
 	handleWebSocketConnection(conn)
 }
 
 // Connection health checker
 func startConnectionHealthChecker() {
-	ticker := time.NewTicker(time.Duration(config.WS.ConnectionCheckInterval) * time.Second)
 	go func() {
-		for range ticker.C {
+		for {
+			cfg := getConfig()
+			interval := 60
+			if cfg != nil && cfg.WS.ConnectionCheckInterval > 0 {
+				interval = cfg.WS.ConnectionCheckInterval
+			}
+			time.Sleep(time.Duration(interval) * time.Second)
 			checkWebSocketConnections()
 		}
 	}()
@@ -100,7 +107,11 @@ func startConnectionHealthChecker() {
 func checkWebSocketConnections() {
 	wsMutex.Lock()
 	now := time.Now()
-	timeout := time.Duration(config.WS.ReadTimeout) * time.Second
+	timeoutSeconds := 300
+	if cfg := getConfig(); cfg != nil && cfg.WS.ReadTimeout > 0 {
+		timeoutSeconds = cfg.WS.ReadTimeout
+	}
+	timeout := time.Duration(timeoutSeconds) * time.Second
 	var staleClients []*WebSocketClientInfo
 	var staleKeys []string
 	for key, wsClient := range wsConnections {
@@ -143,8 +154,8 @@ func cleanupDisconnectedWSClient(wsClient *WebSocketClientInfo, key string) {
 func handleWebSocketConnection(conn *websocket.Conn) {
 	var clientInfo *WebSocketClientInfo
 	for {
-		if config != nil {
-			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(config.WS.ReadTimeout) * time.Second)); err != nil {
+		if cfg := getConfig(); cfg != nil {
+			if err := conn.SetReadDeadline(time.Now().Add(time.Duration(cfg.WS.ReadTimeout) * time.Second)); err != nil {
 				log.Printf("Failed to set read deadline: %v", err)
 				break
 			}

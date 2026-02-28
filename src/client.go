@@ -102,10 +102,11 @@ func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func validToken(token string) bool {
-	if config == nil || len(config.Tokens) == 0 || token == "" {
+	cfg := getConfig()
+	if cfg == nil || len(cfg.Tokens) == 0 || token == "" {
 		return false
 	}
-	for _, t := range config.Tokens {
+	for _, t := range cfg.Tokens {
 		if t == token {
 			return true
 		}

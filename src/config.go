@@ -6,6 +6,14 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
+)
+
+var (
+	config           *Config
+	configMutex      sync.RWMutex
+	configSearchPath []string
+	loadedConfigPath string
 )
 
 // WebSocketConfig structure for WebSocket settings
@@ -132,4 +140,56 @@ func LoadConfig(path string) (*Config, error) {
 	printConfigMinimal(&cfg)
 
 	return &cfg, nil
+}
+
+func setConfigSearchPaths(paths []string) {
+	configMutex.Lock()
+	configSearchPath = append([]string(nil), paths...)
+	configMutex.Unlock()
+}
+
+func loadConfigFromSearchPaths() (*Config, string, error) {
+	configMutex.RLock()
+	paths := append([]string(nil), configSearchPath...)
+	configMutex.RUnlock()
+
+	if len(paths) == 0 {
+		return nil, "", fmt.Errorf("no config search paths configured")
+	}
+
+	var lastErr error
+	for _, path := range paths {
+		cfg, err := LoadConfig(path)
+		if err == nil {
+			return cfg, path, nil
+		}
+		lastErr = err
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("unable to load config")
+	}
+	return nil, "", lastErr
+}
+
+func setActiveConfig(cfg *Config, path string) {
+	configMutex.Lock()
+	config = cfg
+	loadedConfigPath = path
+	configMutex.Unlock()
+}
+
+func getConfig() *Config {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	return config
+}
+
+func reloadConfig() (string, error) {
+	cfg, path, err := loadConfigFromSearchPaths()
+	if err != nil {
+		return "", err
+	}
+	setActiveConfig(cfg, path)
+	return path, nil
 }
