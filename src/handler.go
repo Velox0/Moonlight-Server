@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 	"sort"
@@ -50,27 +49,6 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 			Connected: status,
 		})
 		client.Mutex.Unlock()
-	}
-
-	// If Accept: text/html, render as HTML table
-	if r.Header.Get("Accept") == "text/html" {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, "<table border='1'><tr><th>NodeID</th><th>Protocol</th><th>Last Seen</th><th>Status</th></tr>")
-		for _, row := range rows {
-			protoJSON, err := row.Protocol.MarshalJSON()
-			protoStr := ""
-			if err == nil {
-				protoStr = string(protoJSON)
-			} else {
-				protoStr = "error"
-			}
-			if len(protoStr) >= 2 && protoStr[0] == '"' && protoStr[len(protoStr)-1] == '"' {
-				protoStr = protoStr[1 : len(protoStr)-1]
-			}
-			fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>", row.NodeID, protoStr, row.LastSeen, row.Connected)
-		}
-		fmt.Fprintf(w, "</table>")
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

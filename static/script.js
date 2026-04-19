@@ -172,16 +172,8 @@ async function fetchClients() {
   } catch (e) {
     console.error("Error fetching clients:", e);
     document.getElementById("client-list").innerHTML =
-      `<table class="clients-table">
-        <thead>
-            <tr>
-                <th>Status</th>
-                <th>Node ID</th>
-                <th>Protocol</th>
-                <th>Last Seen</th>
-            </tr>
-        </thead>
-        <tbody>`;
+      "<p>Unable to load clients</p>";
+    document.getElementById("client-count").textContent = "0";
   }
 }
 
