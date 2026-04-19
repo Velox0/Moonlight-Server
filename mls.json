@@ -21,6 +21,11 @@
     "index_path": "/",
     "dashboard_path": "/dashboard"
   },
+  "swagger": {
+    "host": "localhost:8000",
+    "base_path": "/",
+    "scheme": "http"
+  },
   "region_hierarchy": {
     "us-east-1": "usa",
     "us-east-2": "usa",

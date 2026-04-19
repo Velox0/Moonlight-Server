@@ -8,7 +8,7 @@
 //
 // @license.name  MIT
 //
-// @host      localhost:8000
+// @host      localhost:8080
 // @basePath  /
 // @schemes   http https
 //
@@ -32,7 +32,7 @@ import (
 	"syscall"
 
 	ginSwagger "github.com/swaggo/http-swagger/v2"
-	_ "github.com/velox0/moonlight-server/docs"
+	docs "github.com/velox0/moonlight-server/docs"
 )
 
 var Version = "dev"
@@ -68,6 +68,7 @@ func configReloadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to reload config: %v", err), http.StatusInternalServerError)
 		return
 	}
+	configureSwaggerInfo(getConfig())
 
 	log.Printf("Config reloaded from %s (HTTP) remote=%s", path, r.RemoteAddr)
 
@@ -95,6 +96,30 @@ func startConfigSignalWatcher() {
 			log.Printf("Config reloaded from %s (SIGHUP)", path)
 		}
 	}()
+}
+
+func configureSwaggerInfo(cfg *Config) {
+	host := fmt.Sprintf("localhost:%d", 8080)
+	basePath := "/"
+	scheme := "http"
+
+	if cfg != nil {
+		if cfg.Swagger.Host != "" {
+			host = cfg.Swagger.Host
+		} else if cfg.Port > 0 {
+			host = fmt.Sprintf("localhost:%d", cfg.Port)
+		}
+		if cfg.Swagger.BasePath != "" {
+			basePath = cfg.Swagger.BasePath
+		}
+		if cfg.Swagger.Scheme != "" {
+			scheme = cfg.Swagger.Scheme
+		}
+	}
+
+	docs.SwaggerInfo.Host = host
+	docs.SwaggerInfo.BasePath = basePath
+	docs.SwaggerInfo.Schemes = []string{scheme}
 }
 
 func main() {
@@ -125,6 +150,7 @@ func main() {
 	}
 	setActiveConfig(cfg, loadedPath)
 	fmt.Printf("Loaded config from: %s\n", loadedPath)
+	configureSwaggerInfo(cfg)
 	startConfigSignalWatcher()
 
 	// Session cleanup

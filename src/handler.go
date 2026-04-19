@@ -2,11 +2,30 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 )
+
+func requestScheme(r *http.Request) string {
+	if forwardedProto := r.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
+		return strings.TrimSpace(strings.Split(forwardedProto, ",")[0])
+	}
+	if r.TLS != nil {
+		return "https"
+	}
+	return "http"
+}
+
+func requestHost(r *http.Request) string {
+	if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
+		return strings.TrimSpace(strings.Split(forwardedHost, ",")[0])
+	}
+	return r.Host
+}
 
 // monitorHandler serves metrics at /monitor in JSON
 // @Summary      Get server metrics
@@ -147,10 +166,12 @@ func collectMonitorData() MonitorData {
 // @Success      200  {object}  map[string]interface{}
 // @Router       /api/docs [get]
 func apiDocsHandler(w http.ResponseWriter, r *http.Request) {
+	baseURL := fmt.Sprintf("%s://%s", requestScheme(r), requestHost(r))
+
 	docs := map[string]interface{}{
 		"title":   "Moonlight Server API Documentation",
 		"version": Version,
-		"baseURL": "http://localhost:8000",
+		"baseURL": baseURL,
 		"endpoints": map[string]interface{}{
 			"GET /": map[string]string{
 				"description": "Serves the HTML dashboard homepage",
@@ -253,11 +274,11 @@ func apiDocsHandler(w http.ResponseWriter, r *http.Request) {
 			"500": "Internal Server Error",
 		},
 		"examples": map[string]interface{}{
-			"curl_heartbeat": `curl -X POST http://localhost:8000/api/heartbeat -H "X-Token: supersecrettokenox0" -H "Content-Type: application/json" -d '{"node_id": "client-001", "protocol": "http"}'`,
-			"curl_login":     `curl -X POST http://localhost:8000/api/admin/login -H "X-Token: supersecrettokenox0"`,
-			"curl_monitor":   `curl http://localhost:8000/api/monitor`,
-			"curl_clients":   `curl http://localhost:8000/api/clients`,
-			"curl_regions":   `curl http://localhost:8000/api/region`,
+			"curl_heartbeat": fmt.Sprintf(`curl -X POST %s/api/heartbeat -H "X-Token: supersecrettokenox0" -H "Content-Type: application/json" -d '{"node_id": "client-001", "protocol": "http"}'`, baseURL),
+			"curl_login":     fmt.Sprintf(`curl -X POST %s/api/admin/login -H "X-Token: supersecrettokenox0"`, baseURL),
+			"curl_monitor":   fmt.Sprintf(`curl %s/api/monitor`, baseURL),
+			"curl_clients":   fmt.Sprintf(`curl %s/api/clients`, baseURL),
+			"curl_regions":   fmt.Sprintf(`curl %s/api/region`, baseURL),
 		},
 		"notes": []string{
 			"All timestamps are in ISO8601 format (UTC)",

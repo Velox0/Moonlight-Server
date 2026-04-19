@@ -35,6 +35,13 @@ type HTMLConfig struct {
 	DashboardPath string `json:"dashboard_path"`
 }
 
+// SwaggerConfig structure for Swagger/OpenAPI metadata
+type SwaggerConfig struct {
+	Host     string `json:"host"`
+	BasePath string `json:"base_path"`
+	Scheme   string `json:"scheme"`
+}
+
 // Config structure for server
 type Config struct {
 	Tokens          []string          `json:"tokens"`
@@ -42,6 +49,7 @@ type Config struct {
 	Port            int               `json:"port"`
 	WS              WebSocketConfig   `json:"ws"`
 	HTML            HTMLConfig        `json:"html"`
+	Swagger         SwaggerConfig     `json:"swagger"`
 	RegionHierarchy map[string]string `json:"region_hierarchy"`
 }
 
@@ -135,6 +143,17 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if cfg.HTML.DashboardPath == "" {
 		cfg.HTML.DashboardPath = "/dashboard"
+	}
+
+	// Set default Swagger configuration
+	if cfg.Swagger.BasePath == "" {
+		cfg.Swagger.BasePath = "/"
+	}
+	if cfg.Swagger.Scheme == "" {
+		cfg.Swagger.Scheme = "http"
+	}
+	if cfg.Swagger.Host == "" {
+		cfg.Swagger.Host = fmt.Sprintf("localhost:%d", cfg.Port)
 	}
 
 	printConfigMinimal(&cfg)
