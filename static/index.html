@@ -105,12 +105,15 @@
             aria-atomic="true"
           ></div>
         </section>
-        <div class="monitor-section">
-          <h3>Memory Usage</h3>
-          <canvas id="memoryChart" width="600" height="200"></canvas>
-          <h3>Connected Clients Over Time</h3>
-          <canvas id="clientsChart" width="600" height="200"></canvas>
-        </div>
+        <details class="monitor-collapsible" closed>
+          <summary>Graphs</summary>
+          <div class="monitor-section">
+            <h3>Memory Usage</h3>
+            <canvas id="memoryChart" width="600" height="200"></canvas>
+            <h3>Connected Clients Over Time</h3>
+            <canvas id="clientsChart" width="600" height="200"></canvas>
+          </div>
+        </details>
 
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       </div>
