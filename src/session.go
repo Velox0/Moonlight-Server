@@ -118,6 +118,16 @@ func clearSessionCookie(w http.ResponseWriter) {
 }
 
 // loginHandler handles POST /api/admin/login with JSON body {"token":"..."}.
+// @Summary      Login with token
+// @Description  Authenticate with a valid token and create an admin session
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Success      200   {object}  SessionResponse
+// @Failure      400   {object}  ErrorResponse
+// @Failure      401   {object}  ErrorResponse
+// @Security     TokenAuth
+// @Router       /api/admin/login [post]
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -154,6 +164,15 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // logoutHandler handles POST /api/admin/logout.
+// @Summary      Logout
+// @Description  Logout and invalidate the current admin session
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Success      200   {object}  StatusResponse
+// @Failure      401   {object}  ErrorResponse
+// @Security     SessionAuth
+// @Router       /api/admin/logout [post]
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -172,6 +191,14 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // sessionCheckHandler handles GET /api/admin/session to check if logged in.
+// @Summary      Check session status
+// @Description  Get information about the current admin session
+// @Tags         Admin
+// @Produce      json
+// @Success      200   {object}  SessionCheckResponse
+// @Failure      401   {object}  ErrorResponse
+// @Security     SessionAuth
+// @Router       /api/admin/session [get]
 func sessionCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)

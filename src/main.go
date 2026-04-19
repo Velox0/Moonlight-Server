@@ -1,3 +1,25 @@
+// @title           Moonlight Server API
+// @version         dev
+// @description     A lightweight, distributed task queue and client management system with WebSocket support
+// @termsOfService  http://swagger.io/terms/
+//
+// @contact.name   Moonlight Server
+// @contact.url    https://github.com/velox0/moonlight-server
+//
+// @license.name  MIT
+//
+// @host      localhost:8000
+// @basePath  /
+// @schemes   http https
+//
+// @securityDefinitions.apikey TokenAuth
+// @in header
+// @name Authorization
+//
+// @securityDefinitions.apikey SessionAuth
+// @in header
+// @name X-Session-ID
+
 package main
 
 import (
@@ -8,10 +30,24 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	ginSwagger "github.com/swaggo/http-swagger/v2"
+	_ "github.com/velox0/moonlight-server/docs"
 )
 
 var Version = "dev"
 
+// configReloadHandler handles POST /api/admin/reload
+// @Summary      Reload configuration
+// @Description  Reload server configuration from disk
+// @Tags         Admin
+// @Produce      json
+// @Success      200   {object}  ReloadResponse
+// @Failure      400   {object}  ErrorResponse
+// @Failure      401   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     SessionAuth
+// @Router       /api/admin/reload [post]
 func configReloadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		log.Printf("Config reload denied: method=%s remote=%s", r.Method, r.RemoteAddr)
@@ -117,22 +153,41 @@ func main() {
 	// New monitor endpoint
 	http.HandleFunc("/api/monitor", monitorHandler)
 
+	// API documentation endpoint
+	http.HandleFunc("/api/docs", apiDocsHandler)
+
+	// Swagger UI (auto-generated from code comments)
+	// Serve Swagger UI at /swagger/index.html
+	http.Handle("/swagger/", ginSwagger.Handler(
+		ginSwagger.URL("/swagger/doc.json"),
+		ginSwagger.DocExpansion("list"),
+		ginSwagger.DeepLinking(true),
+	))
+	// Redirect /swagger to /swagger/index.html
+	http.HandleFunc("/swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
+	})
+
 	// HTML dashboard (only if enabled)
 	if cfg.HTML.Enabled {
-		// Serve static files
-		fs := http.FileServer(http.Dir("static"))
-		http.Handle(cfg.HTML.StaticPath+"/", http.StripPrefix(cfg.HTML.StaticPath, fs))
+		// Serve static files from /static
+		staticFS := http.FileServer(http.Dir("static"))
+		http.Handle(cfg.HTML.StaticPath+"/", http.StripPrefix(cfg.HTML.StaticPath, staticFS))
 
-		// Serve index page
-		http.HandleFunc(cfg.HTML.IndexPath, func(w http.ResponseWriter, r *http.Request) {
+		// Root path handler - serves index.html for /
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			// Only serve index.html for the root path
 			if r.URL.Path == "/" {
 				http.ServeFile(w, r, "static/index.html")
-			} else {
-				http.NotFound(w, r)
+				return
 			}
+			// For any other path not caught by other handlers, return 404
+			http.NotFound(w, r)
 		})
 
-		fmt.Printf("HTML dashboard enabled on path: %s\n", cfg.HTML.DashboardPath)
+		fmt.Printf("HTML dashboard enabled\n")
+		fmt.Printf("  Static files: %s/\n", cfg.HTML.StaticPath)
+		fmt.Printf("  Homepage: %s\n", cfg.HTML.IndexPath)
 	}
 
 	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {

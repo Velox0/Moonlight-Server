@@ -42,6 +42,17 @@ func assignNodeID() string {
 }
 
 // Client heartbeat handler (HTTP)
+// @Summary      Register or update client presence
+// @Description  Clients call this endpoint to register and update their presence periodically
+// @Tags         Client
+// @Accept       json
+// @Produce      json
+// @Param        body  body      HeartbeatRequest  true  "Heartbeat payload"
+// @Success      200   {object}  HeartbeatResponse
+// @Failure      400   {object}  ErrorResponse
+// @Failure      401   {object}  ErrorResponse
+// @Security     TokenAuth
+// @Router       /api/heartbeat [post]
 func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 

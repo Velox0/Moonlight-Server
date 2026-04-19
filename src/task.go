@@ -14,15 +14,15 @@ import (
 )
 
 type Task struct {
-	ID      string          `json:"id"`
-	Region  string          `json:"region"`
-	Payload json.RawMessage `json:"payload"`
+	ID      string      `json:"id"`
+	Region  string      `json:"region"`
+	Payload interface{} `json:"payload"`
 }
 
 // TaskResponse represents a response from a client for a specific task
 type TaskResponse struct {
 	TaskID   string            `json:"task_id"`
-	Response json.RawMessage   `json:"response"`
+	Response interface{}       `json:"response"`
 	Status   int               `json:"status"`
 	Headers  map[string]string `json:"headers,omitempty"`
 }
@@ -41,6 +41,18 @@ func generateTaskID() string {
 	return hex.EncodeToString(b[:])
 }
 
+// taskRequestHandler handles task requests from clients
+// @Summary      Request a task
+// @Description  Clients use this to request available tasks from the server
+// @Tags         Task
+// @Accept       json
+// @Produce      json
+// @Success      200   {object}  TaskResponse
+// @Success      202   {object}  ErrorResponse  "No task available"
+// @Failure      400   {object}  ErrorResponse
+// @Failure      401   {object}  ErrorResponse
+// @Security     TokenAuth
+// @Router       /api/request [post]
 func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -134,7 +146,18 @@ func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(response.Status)
-		w.Write(response.Response)
+
+		// Write response - marshal if it's interface{}
+		var responseBytes []byte
+		switch v := response.Response.(type) {
+		case []byte:
+			responseBytes = v
+		case json.RawMessage:
+			responseBytes = []byte(v)
+		default:
+			responseBytes, _ = json.Marshal(v)
+		}
+		w.Write(responseBytes)
 
 	case <-time.After(30 * time.Second):
 		// Timeout
@@ -149,7 +172,14 @@ func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 // sendTaskViaHTTP sends task via HTTP (fallback method)
 func sendTaskViaHTTP(client *ClientInfo, task Task) error {
 	url := fmt.Sprintf("http://%s:%d/work", client.IP, client.Port)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(task.Payload))
+
+	// Marshal payload to JSON
+	payloadBytes, err := json.Marshal(task.Payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(payloadBytes))
 	if err != nil {
 		return fmt.Errorf("failed to build request: %v", err)
 	}

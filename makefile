@@ -3,7 +3,7 @@ BUILD_DIR := build
 SRC_DIR := ./src
 VERSION ?= $(shell git describe --tags --always)
 
-.PHONY: all build clean run install
+.PHONY: all build clean run dev install
 
 all: build
 
@@ -16,6 +16,10 @@ clean:
 
 run: build
 	./$(BUILD_DIR)/$(APP_NAME)
+
+dev:
+	go run github.com/swaggo/swag/cmd/swag@latest init -d ./src
+	go run ./src
 
 install: build
 	sudo cp ./$(BUILD_DIR)/$(APP_NAME) /usr/bin/$(APP_NAME)

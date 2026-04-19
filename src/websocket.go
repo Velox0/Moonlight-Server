@@ -311,12 +311,19 @@ func sendTaskToClient(client *ClientInfo, task Task) error {
 	if !wsClientInfo.Connected {
 		return fmt.Errorf("WebSocket connection for client %s is not connected", key)
 	}
+
+	// Marshal payload to JSON
+	payloadBytes, err := json.Marshal(task.Payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %v", err)
+	}
+
 	taskMsg := WebSocketMessage{
 		Type:    "task",
 		TaskID:  task.ID,
-		Payload: json.RawMessage(task.Payload),
+		Payload: json.RawMessage(payloadBytes),
 	}
-	err := writeWSMessage(wsClientInfo.Conn, taskMsg)
+	err = writeWSMessage(wsClientInfo.Conn, taskMsg)
 	if err != nil {
 		wsClientInfo.Connected = false
 		log.Printf("Failed to send task to client %s: %v", key, err)
