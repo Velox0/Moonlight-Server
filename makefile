@@ -19,7 +19,6 @@ run: build
 
 dev:
 	go run github.com/swaggo/swag/cmd/swag@latest init -d ./src
-	go run ./src
 
 install: build
 	sudo cp ./$(BUILD_DIR)/$(APP_NAME) /usr/bin/$(APP_NAME)

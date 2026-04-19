@@ -43,15 +43,16 @@ func generateTaskID() string {
 
 // taskRequestHandler handles task requests from clients
 // @Summary      Request a task
-// @Description  Clients use this to request available tasks from the server
+// @Description  Proxies a task to a suitable connected client and returns the client response. Request body requires payload as a JSON object. Region is optional (empty/global/default matches any).
 // @Tags         Task
 // @Accept       json
 // @Produce      json
+// @Param        body  body      TaskRequest   true  "Task request payload"
 // @Success      200   {object}  TaskResponse
-// @Success      202   {object}  ErrorResponse  "No task available"
 // @Failure      400   {object}  ErrorResponse
-// @Failure      401   {object}  ErrorResponse
-// @Security     TokenAuth
+// @Failure      502   {object}  ErrorResponse
+// @Failure      503   {object}  ErrorResponse
+// @Failure      504   {object}  ErrorResponse
 // @Router       /api/request [post]
 func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -60,13 +61,20 @@ func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	var task Task
+	var req TaskRequest
 	body, _ := io.ReadAll(r.Body)
-	err := json.Unmarshal(body, &task)
+	err := json.Unmarshal(body, &req)
 	if err != nil {
 		http.Error(w, "invalid task", http.StatusBadRequest)
 		return
 	}
+
+	if req.Payload == nil {
+		http.Error(w, "invalid task: payload must be a JSON object", http.StatusBadRequest)
+		return
+	}
+
+	task := Task{Region: req.Region, Payload: req.Payload}
 
 	client := selectClientForRegion(task.Region)
 	if client == nil {

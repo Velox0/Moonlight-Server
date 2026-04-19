@@ -1,9 +1,9 @@
 // @title           Moonlight Server API
-// @version         dev
-// @description     A lightweight, distributed task queue and client management system with WebSocket support
+// @version         1.0.0
+// @description     A lightweight HTTP JSON proxy that selects a registered client by region and forwards your payload. Supports HTTP and WebSocket communication.
 // @termsOfService  http://swagger.io/terms/
 //
-// @contact.name   Moonlight Server
+// @contact.name   GitHub
 // @contact.url    https://github.com/velox0/moonlight-server
 //
 // @license.name  MIT
@@ -178,9 +178,6 @@ func main() {
 
 	// New monitor endpoint
 	http.HandleFunc("/api/monitor", monitorHandler)
-
-	// API documentation endpoint
-	http.HandleFunc("/api/docs", apiDocsHandler)
 
 	// Swagger UI (auto-generated from code comments)
 	// Serve Swagger UI at /swagger/index.html

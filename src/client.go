@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -41,17 +42,15 @@ func assignNodeID() string {
 	return timestampHex + counterHex
 }
 
-// Client heartbeat handler (HTTP)
 // @Summary      Register or update client presence
-// @Description  Clients call this endpoint to register and update their presence periodically
+// @Description  Registers and updates client presence. Authentication is via token in JSON body. Payload except token and region is optional.
 // @Tags         Client
 // @Accept       json
-// @Produce      json
+// @Produce      plain
 // @Param        body  body      HeartbeatRequest  true  "Heartbeat payload"
-// @Success      200   {object}  HeartbeatResponse
+// @Success      200   {string}  string  "registered"
 // @Failure      400   {object}  ErrorResponse
 // @Failure      401   {object}  ErrorResponse
-// @Security     TokenAuth
 // @Router       /api/heartbeat [post]
 func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -70,9 +69,17 @@ func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body, _ := io.ReadAll(r.Body)
-	err := json.Unmarshal(body, &req)
-	if err != nil || req.IP == "" || req.Region == "" || req.Token == "" {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if len(body) > 0 {
+		_ = json.Unmarshal(body, &req)
+	}
+
+	if req.IP == "" {
+		remoteIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+		req.IP = remoteIP
+	}
+
+	if req.Region == "" || req.Token == "" {
+		http.Error(w, "invalid request: token and region are required", http.StatusBadRequest)
 		return
 	}
 

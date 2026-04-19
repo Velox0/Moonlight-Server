@@ -189,10 +189,7 @@ func handleWebSocketConnection(conn *websocket.Conn) {
 }
 
 func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSocketClientInfo {
-	var req struct {
-		Token  string `json:"token"`
-		Region string `json:"region"`
-	}
+	var req WebSocketRegistrationRequest
 	err := json.Unmarshal(msg.Payload, &req)
 	if err != nil || req.Region == "" || req.Token == "" {
 		sendError(conn, "invalid registration request")
@@ -238,9 +235,9 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 	wsConnections[key] = wsClientInfo
 	wsMutex.Unlock()
 
-	registeredPayload, marshalErr := json.Marshal(map[string]string{
-		"status":  "ok",
-		"node_id": client.NodeID,
+	registeredPayload, marshalErr := json.Marshal(WebSocketRegisteredResponse{
+		Status: "ok",
+		NodeID: client.NodeID,
 	})
 	if marshalErr != nil {
 		registeredPayload = json.RawMessage(`{"status": "ok"}`)
@@ -266,8 +263,7 @@ func handleClientHeartbeat(clientInfo *WebSocketClientInfo, _ WebSocketMessage) 
 	clientInfo.Mutex.Unlock()
 	clientInfo.LastHeartbeat = now
 	response := WebSocketMessage{
-		Type:    "heartbeat_ack",
-		Payload: json.RawMessage(`{"timestamp": "` + now.Format(time.RFC3339) + `"}`),
+		Type: "heartbeat_ack",
 	}
 	if err := writeWSMessage(clientInfo.Conn, response); err != nil {
 		log.Printf("Failed to send heartbeat ack to client %s: %v", clientKey(clientInfo.IP, clientInfo.NodeID), err)
@@ -291,9 +287,11 @@ func handleTaskResponse(clientInfo *WebSocketClientInfo, msg WebSocketMessage) {
 }
 
 func sendError(conn *websocket.Conn, message string) {
+	errResp := WebSocketErrorResponse{Message: message}
+	payload, _ := json.Marshal(errResp)
 	response := WebSocketMessage{
 		Type:    "error",
-		Payload: json.RawMessage(`{"message": "` + message + `"}`),
+		Payload: payload,
 	}
 	if err := writeWSMessage(conn, response); err != nil {
 		log.Printf("Failed to send websocket error response: %v", err)
