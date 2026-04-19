@@ -35,6 +35,12 @@ type HeartbeatRequest struct {
 	Port   int    `json:"port" example:"8000"`
 }
 
+// TaskRequest payload for POST /api/request
+type TaskRequest struct {
+	Region  string                 `json:"region" example:"us-west"`
+	Payload map[string]interface{} `json:"payload" swaggertype:"object"`
+}
+
 // HeartbeatResponse server response to heartbeat
 type HeartbeatResponse struct {
 	Status     string `json:"status" example:"ok"`
@@ -148,6 +154,23 @@ func (p Protocol) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unknown protocol: %s", s)
 	}
 	return nil
+}
+
+// WebSocketRegistrationRequest represents the payload for WS registration
+type WebSocketRegistrationRequest struct {
+	Token  string `json:"token"`
+	Region string `json:"region"`
+}
+
+// WebSocketRegisteredResponse represents the server response after WS registration
+type WebSocketRegisteredResponse struct {
+	Status string `json:"status" example:"ok"`
+	NodeID string `json:"node_id" example:"client-001"`
+}
+
+// WebSocketErrorResponse represents a websocket error message
+type WebSocketErrorResponse struct {
+	Message string `json:"message" example:"invalid registration request"`
 }
 
 type ClientInfo struct {

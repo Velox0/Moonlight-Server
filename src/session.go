@@ -119,14 +119,14 @@ func clearSessionCookie(w http.ResponseWriter) {
 
 // loginHandler handles POST /api/admin/login with JSON body {"token":"..."}.
 // @Summary      Login with token
-// @Description  Authenticate with a valid token and create an admin session
+// @Description  Authenticate with a valid token in the request body and create an admin session cookie
 // @Tags         Admin
 // @Accept       json
 // @Produce      json
-// @Success      200   {object}  SessionResponse
+// @Success      200   {object}  StatusResponse
 // @Failure      400   {object}  ErrorResponse
-// @Failure      401   {object}  ErrorResponse
-// @Security     TokenAuth
+// @Failure      403   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
 // @Router       /api/admin/login [post]
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -160,7 +160,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Login successful remote=%s", r.RemoteAddr)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 // logoutHandler handles POST /api/admin/logout.
@@ -170,8 +170,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 // @Accept       json
 // @Produce      json
 // @Success      200   {object}  StatusResponse
-// @Failure      401   {object}  ErrorResponse
-// @Security     SessionAuth
 // @Router       /api/admin/logout [post]
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -196,8 +194,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 // @Tags         Admin
 // @Produce      json
 // @Success      200   {object}  SessionCheckResponse
-// @Failure      401   {object}  ErrorResponse
-// @Security     SessionAuth
 // @Router       /api/admin/session [get]
 func sessionCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -207,8 +203,8 @@ func sessionCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if getSessionFromRequest(r) {
-		json.NewEncoder(w).Encode(map[string]interface{}{"authenticated": true})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"authenticated": true})
 	} else {
-		json.NewEncoder(w).Encode(map[string]interface{}{"authenticated": false})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"authenticated": false})
 	}
 }

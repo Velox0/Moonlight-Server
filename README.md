@@ -73,8 +73,8 @@ Minimal `/etc/moonlight/mls.json`:
 
 All endpoints use/return JSON.
 
-- **POST `/api/heartbeat`** - Register client
-- **POST `/task/request`** - Submit task for processing
+- **POST `/api/heartbeat`** - Register client (token + region required)
+- **POST `/api/request`** - Submit task for processing
 - **GET `/api/clients`** - Get connected clients list
 - **GET `/api/region`** - Get available regions list
 - **GET `/api/monitor`** - Runtime/server metrics
@@ -123,10 +123,7 @@ Connect to `ws://server:port/ws` for real-time communication.
 
 ```json
 {
-  "type": "heartbeat",
-  "payload": {
-    "timestamp": "2024-01-01T12:00:00Z"
-  }
+  "type": "heartbeat"
 }
 ```
 
