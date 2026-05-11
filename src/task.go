@@ -43,16 +43,14 @@ func generateTaskID() string {
 
 // taskRequestHandler handles task requests from clients
 // @Summary      Request a task
-// @Description  Proxies a task to a suitable connected client and returns the client response. Request body requires payload as a JSON object. Region is optional (empty/global/default matches any).
+// @Description  Returns direct P2P peer connection info for a suitable client. Caller connects to the selected client directly over TCP/HTTP.
 // @Tags         Task
 // @Accept       json
 // @Produce      json
 // @Param        body  body      TaskRequest   true  "Task request payload"
-// @Success      200   {object}  TaskResponse
+// @Success      200   {object}  P2PTaskResponse
 // @Failure      400   {object}  ErrorResponse
-// @Failure      502   {object}  ErrorResponse
 // @Failure      503   {object}  ErrorResponse
-// @Failure      504   {object}  ErrorResponse
 // @Router       /api/request [post]
 func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -69,11 +67,6 @@ func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Payload == nil {
-		http.Error(w, "invalid task: payload must be a JSON object", http.StatusBadRequest)
-		return
-	}
-
 	task := Task{Region: req.Region, Payload: req.Payload}
 
 	client := selectClientForRegion(task.Region)
@@ -82,99 +75,32 @@ func taskRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if client.Port <= 0 {
+		http.Error(w, "selected client is not advertising a TCP port", http.StatusServiceUnavailable)
+		return
+	}
+
 	// Assign a server-side ID
 	task.ID = generateTaskID()
 
-	// Create response channel for this task
-	responseChan := make(chan *TaskResponse, 1)
-	taskMutex.Lock()
-	pendingTasks[task.ID] = responseChan
-	taskMutex.Unlock()
-
-	// Clean up response channel after timeout
-	go func() {
-		time.Sleep(30 * time.Second) // 30 second timeout
-		taskMutex.Lock()
-		if _, exists := pendingTasks[task.ID]; exists {
-			delete(pendingTasks, task.ID)
-			// Use select to avoid closing already closed channel
-			select {
-			case <-responseChan:
-				// Channel already closed, do nothing
-			default:
-				close(responseChan)
-			}
-		}
-		taskMutex.Unlock()
-	}()
-
-	// Try to send task via WebSocket first
-	err = sendTaskToClient(client, task)
-	if err != nil {
-		// Fallback to HTTP if WebSocket fails
-		err = sendTaskViaHTTP(client, task)
-		if err != nil {
-			// Clean up and return error
-			taskMutex.Lock()
-			if _, exists := pendingTasks[task.ID]; exists {
-				delete(pendingTasks, task.ID)
-				// Use select to avoid closing already closed channel
-				select {
-				case <-responseChan:
-					// Channel already closed, do nothing
-				default:
-					close(responseChan)
-				}
-			}
-			taskMutex.Unlock()
-
-			http.Error(w, "client unreachable", http.StatusBadGateway)
-			return
-		}
+	peerURL := fmt.Sprintf("http://%s:%d/work", client.IP, client.Port)
+	resp := P2PTaskResponse{
+		Mode:   "p2p-tcp",
+		TaskID: task.ID,
+		Region: client.Region,
+		Peer: P2PPeerEndpoint{
+			NodeID:   client.NodeID,
+			IP:       client.IP,
+			Port:     client.Port,
+			Protocol: "tcp",
+			URL:      peerURL,
+		},
+		TTLSeconds: 30,
 	}
 
-	fmt.Printf("TASK PROXIED id=%s to client %s region %s\n", task.ID, clientKey(client.IP, client.NodeID), client.Region)
-
-	// Wait for response
-	select {
-	case response := <-responseChan:
-		// Clean up the task from pending tasks
-		taskMutex.Lock()
-		delete(pendingTasks, task.ID)
-		taskMutex.Unlock()
-
-		// Set response headers
-		for key, value := range response.Headers {
-			w.Header().Set(key, value)
-		}
-
-		// Set default content type if not provided
-		if w.Header().Get("Content-Type") == "" {
-			w.Header().Set("Content-Type", "application/json")
-		}
-
-		w.WriteHeader(response.Status)
-
-		// Write response - marshal if it's interface{}
-		var responseBytes []byte
-		switch v := response.Response.(type) {
-		case []byte:
-			responseBytes = v
-		case json.RawMessage:
-			responseBytes = []byte(v)
-		default:
-			responseBytes, _ = json.Marshal(v)
-		}
-		w.Write(responseBytes)
-
-	case <-time.After(30 * time.Second):
-		// Timeout
-		taskMutex.Lock()
-		delete(pendingTasks, task.ID)
-		taskMutex.Unlock()
-
-		http.Error(w, "task timeout", http.StatusGatewayTimeout)
-	}
+	fmt.Printf("P2P MATCH id=%s peer=%s region=%s endpoint=%s\n", task.ID, clientKey(client.IP, client.NodeID), client.Region, peerURL)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // sendTaskViaHTTP sends task via HTTP (fallback method)

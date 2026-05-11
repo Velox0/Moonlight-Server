@@ -16,8 +16,8 @@ func getParentRegion(region string) string {
 
 // Region filter
 func filterClientsByRegion(targetRegion string) []*ClientInfo {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
+	clientsMutex.RLock()
+	defer clientsMutex.RUnlock()
 	var matched []*ClientInfo
 	for _, client := range clients {
 		client.Mutex.Lock()
@@ -61,8 +61,8 @@ func selectClientForRegion(region string) *ClientInfo {
 
 // Utility to list all valid clients
 func getAllValidClients() []*ClientInfo {
-	clientsMutex.Lock()
-	defer clientsMutex.Unlock()
+	clientsMutex.RLock()
+	defer clientsMutex.RUnlock()
 	var valid []*ClientInfo
 	for _, c := range clients {
 		c.Mutex.Lock()

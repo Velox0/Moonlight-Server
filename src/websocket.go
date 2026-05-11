@@ -209,12 +209,15 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 	if !exists {
 		client = &ClientInfo{
 			IP: remoteIP, NodeID: nodeID, Token: req.Token,
-			Region: req.Region, Valid: true, Protocol: ProtocolWS,
+			Region: req.Region, Port: req.ListenPort, Valid: true, Protocol: ProtocolWS,
 		}
 		clients[key] = client
 	} else {
 		client.Mutex.Lock()
 		client.Region, client.Token, client.Valid = req.Region, req.Token, true
+		if req.ListenPort > 0 {
+			client.Port = req.ListenPort
+		}
 		client.IP = remoteIP
 		client.Protocol = ProtocolWS
 		client.Mutex.Unlock()

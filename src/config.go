@@ -64,7 +64,7 @@ func printConfigMinimal(cfg *Config) {
 	for _, k := range keys {
 		pairs = append(pairs, fmt.Sprintf("%s->%s", k, cfg.RegionHierarchy[k]))
 	}
-	hierarchy := "—"
+	hierarchy := "-"
 	if len(pairs) > 0 {
 		hierarchy = strings.Join(pairs, ", ")
 	}

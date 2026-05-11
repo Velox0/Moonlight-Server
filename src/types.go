@@ -91,6 +91,24 @@ type RegionListResponse struct {
 	Regions []string `json:"regions" example:"global,us-east-1,us-west-1"`
 }
 
+// P2PPeerEndpoint is the direct connection information for a selected client.
+type P2PPeerEndpoint struct {
+	NodeID   string `json:"node_id" example:"client-001"`
+	IP       string `json:"ip" example:"192.168.1.100"`
+	Port     int    `json:"port" example:"3000"`
+	Protocol string `json:"protocol" example:"tcp"`
+	URL      string `json:"url" example:"http://192.168.1.100:3000/work"`
+}
+
+// P2PTaskResponse is returned by /api/request for direct client-to-client execution.
+type P2PTaskResponse struct {
+	Mode       string          `json:"mode" example:"p2p-tcp"`
+	TaskID     string          `json:"task_id" example:"abc123"`
+	Region     string          `json:"region" example:"us-east-1"`
+	Peer       P2PPeerEndpoint `json:"peer"`
+	TTLSeconds int             `json:"ttl_seconds" example:"30"`
+}
+
 type Client struct {
 	NodeID   string
 	Protocol Protocol
@@ -158,8 +176,9 @@ func (p Protocol) UnmarshalJSON(data []byte) error {
 
 // WebSocketRegistrationRequest represents the payload for WS registration
 type WebSocketRegistrationRequest struct {
-	Token  string `json:"token"`
-	Region string `json:"region"`
+	Token      string `json:"token"`
+	Region     string `json:"region"`
+	ListenPort int    `json:"listen_port,omitempty"`
 }
 
 // WebSocketRegisteredResponse represents the server response after WS registration

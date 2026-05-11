@@ -67,7 +67,8 @@ class MoonlightWebSocketClient:
             "type": "register",
             "payload": {
                 "token": self.config["token"],
-                "region": self.config["region"]
+                "region": self.config["region"],
+                "listen_port": self.config.get("listen_port", 0)
             }
         }
         await self.send(register_message)
@@ -77,10 +78,7 @@ class MoonlightWebSocketClient:
         while self.connected:
             try:
                 heartbeat_message = {
-                    "type": "heartbeat",
-                    "payload": {
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-                    }
+                    "type": "heartbeat"
                 }
                 await self.send(heartbeat_message)
                 await asyncio.sleep(self.heartbeat_interval)
@@ -200,10 +198,11 @@ class MoonlightWebSocketClient:
 async def main():
     """Main function"""
     config = {
-        "token": "mls-2025-testtoken",
-        "region": "us-west"
+        "token": "supersecrettokenox1",
+        "region": "us-east-1",
+        "listen_port": 3000
     }
-    client = MoonlightWebSocketClient("wss://moonlight.velox0.com/ws", config)
+    client = MoonlightWebSocketClient("ws://localhost:8080/ws", config)
 
     try:
         await client.connect()
