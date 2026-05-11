@@ -35,21 +35,14 @@ type HTMLConfig struct {
 	DashboardPath string `json:"dashboard_path"`
 }
 
-// SwaggerConfig structure for Swagger/OpenAPI metadata
-type SwaggerConfig struct {
-	Host     string `json:"host"`
-	BasePath string `json:"base_path"`
-	Scheme   string `json:"scheme"`
-}
-
 // Config structure for server
 type Config struct {
 	Tokens          []string          `json:"tokens"`
 	RetryCount      int               `json:"retry_count"`
 	Port            int               `json:"port"`
+	QUICPort        int               `json:"quic_port"`
 	WS              WebSocketConfig   `json:"ws"`
 	HTML            HTMLConfig        `json:"html"`
-	Swagger         SwaggerConfig     `json:"swagger"`
 	RegionHierarchy map[string]string `json:"region_hierarchy"`
 }
 
@@ -75,6 +68,12 @@ func printConfigMinimal(cfg *Config) {
 		wsStatus = fmt.Sprintf("enabled (path: %s)", cfg.WS.Path)
 	}
 
+	// QUIC status
+	quicStatus := "disabled"
+	if cfg.QUICPort > 0 {
+		quicStatus = fmt.Sprintf("enabled (port: %d)", cfg.QUICPort)
+	}
+
 	// HTML status
 	htmlStatus := "disabled"
 	if cfg.HTML.Enabled {
@@ -87,6 +86,7 @@ func printConfigMinimal(cfg *Config) {
 			"RetryCount       : %d\n"+
 			"Region Hierarchy : %s\n"+
 			"Port             : %d\n"+
+			"QUIC             : %s\n"+
 			"WebSocket        : %s\n"+
 			"HTML             : %s\n"+
 			"=======================================\n",
@@ -94,6 +94,7 @@ func printConfigMinimal(cfg *Config) {
 		cfg.RetryCount,
 		hierarchy,
 		cfg.Port,
+		quicStatus,
 		wsStatus,
 		htmlStatus,
 	)
@@ -112,6 +113,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if cfg.Port == 0 {
 		cfg.Port = 8080
+	}
+	if cfg.QUICPort == 0 {
+		cfg.QUICPort = 6000 // Default QUIC port for P2P
 	}
 
 	// Set default WebSocket configuration
@@ -143,17 +147,6 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if cfg.HTML.DashboardPath == "" {
 		cfg.HTML.DashboardPath = "/dashboard"
-	}
-
-	// Set default Swagger configuration
-	if cfg.Swagger.BasePath == "" {
-		cfg.Swagger.BasePath = "/"
-	}
-	if cfg.Swagger.Scheme == "" {
-		cfg.Swagger.Scheme = "http"
-	}
-	if cfg.Swagger.Host == "" {
-		cfg.Swagger.Host = fmt.Sprintf("localhost:%d", cfg.Port)
 	}
 
 	printConfigMinimal(&cfg)

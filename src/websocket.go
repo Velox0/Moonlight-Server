@@ -220,6 +220,8 @@ func handleClientRegistration(conn *websocket.Conn, msg WebSocketMessage) *WebSo
 		}
 		client.IP = remoteIP
 		client.Protocol = ProtocolWS
+		client.ConsecutiveFailures = 0
+		client.UnresponsiveUntil = time.Time{}
 		client.Mutex.Unlock()
 	}
 	client.Mutex.Lock()
@@ -263,6 +265,8 @@ func handleClientHeartbeat(clientInfo *WebSocketClientInfo, _ WebSocketMessage) 
 	now := time.Now()
 	clientInfo.Mutex.Lock()
 	clientInfo.LastSeen = now
+	clientInfo.ConsecutiveFailures = 0
+	clientInfo.UnresponsiveUntil = time.Time{}
 	clientInfo.Mutex.Unlock()
 	clientInfo.LastHeartbeat = now
 	response := WebSocketMessage{

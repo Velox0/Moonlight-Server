@@ -1,25 +1,3 @@
-// @title           Moonlight Server API
-// @version         1.0.0
-// @description     A lightweight HTTP JSON proxy that selects a registered client by region and forwards your payload. Supports HTTP and WebSocket communication.
-// @termsOfService  http://swagger.io/terms/
-//
-// @contact.name   GitHub
-// @contact.url    https://github.com/velox0/moonlight-server
-//
-// @license.name  MIT
-//
-// @host      localhost:8080
-// @basePath  /
-// @schemes   http https
-//
-// @securityDefinitions.apikey TokenAuth
-// @in header
-// @name Authorization
-//
-// @securityDefinitions.apikey SessionAuth
-// @in header
-// @name X-Session-ID
-
 package main
 
 import (
@@ -30,24 +8,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	ginSwagger "github.com/swaggo/http-swagger/v2"
-	docs "github.com/velox0/moonlight-server/docs"
+	"time"
 )
 
 var Version = "dev"
 
 // configReloadHandler handles POST /api/admin/reload
-// @Summary      Reload configuration
-// @Description  Reload server configuration from disk
-// @Tags         Admin
-// @Produce      json
-// @Success      200   {object}  ReloadResponse
-// @Failure      400   {object}  ErrorResponse
-// @Failure      401   {object}  ErrorResponse
-// @Failure      500   {object}  ErrorResponse
-// @Security     SessionAuth
-// @Router       /api/admin/reload [post]
 func configReloadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		log.Printf("Config reload denied: method=%s remote=%s", r.Method, r.RemoteAddr)
@@ -68,7 +34,6 @@ func configReloadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to reload config: %v", err), http.StatusInternalServerError)
 		return
 	}
-	configureSwaggerInfo(getConfig())
 
 	log.Printf("Config reloaded from %s (HTTP) remote=%s", path, r.RemoteAddr)
 
@@ -96,30 +61,6 @@ func startConfigSignalWatcher() {
 			log.Printf("Config reloaded from %s (SIGHUP)", path)
 		}
 	}()
-}
-
-func configureSwaggerInfo(cfg *Config) {
-	host := fmt.Sprintf("localhost:%d", 8080)
-	basePath := "/"
-	scheme := "http"
-
-	if cfg != nil {
-		if cfg.Swagger.Host != "" {
-			host = cfg.Swagger.Host
-		} else if cfg.Port > 0 {
-			host = fmt.Sprintf("localhost:%d", cfg.Port)
-		}
-		if cfg.Swagger.BasePath != "" {
-			basePath = cfg.Swagger.BasePath
-		}
-		if cfg.Swagger.Scheme != "" {
-			scheme = cfg.Swagger.Scheme
-		}
-	}
-
-	docs.SwaggerInfo.Host = host
-	docs.SwaggerInfo.BasePath = basePath
-	docs.SwaggerInfo.Schemes = []string{scheme}
 }
 
 func main() {
@@ -150,7 +91,6 @@ func main() {
 	}
 	setActiveConfig(cfg, loadedPath)
 	fmt.Printf("Loaded config from: %s\n", loadedPath)
-	configureSwaggerInfo(cfg)
 	startConfigSignalWatcher()
 
 	// Session cleanup
@@ -170,26 +110,30 @@ func main() {
 		startConnectionHealthChecker()
 	}
 
+	// QUIC listener (only if port is configured)
+	if cfg.QUICPort > 0 {
+		if err := StartQUICListener(cfg.QUICPort); err != nil {
+			log.Printf("Failed to start QUIC listener: %v", err)
+			// Continue without QUIC if it fails
+		} else {
+			// Start peer cleanup loop
+			StartPeerCleanupLoop(30*time.Second, 5*time.Minute)
+		}
+	}
+
 	// Client table endpoint
 	http.HandleFunc("/api/clients", clientsTableHandler)
 
 	// Region endpoint
 	http.HandleFunc("/api/region", regionListHandler)
 
+	// Task endpoints
+	http.HandleFunc("/api/request", taskRequestHandler)
+	http.HandleFunc("/api/request/quic", quicTaskRequestHandler)
+	http.HandleFunc("/api/request/quic/execute", quicTaskExecuteHandler)
+
 	// New monitor endpoint
 	http.HandleFunc("/api/monitor", monitorHandler)
-
-	// Swagger UI (auto-generated from code comments)
-	// Serve Swagger UI at /swagger/index.html
-	http.Handle("/swagger/", ginSwagger.Handler(
-		ginSwagger.URL("/swagger/doc.json"),
-		ginSwagger.DocExpansion("list"),
-		ginSwagger.DeepLinking(true),
-	))
-	// Redirect /swagger to /swagger/index.html
-	http.HandleFunc("/swagger", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
-	})
 
 	// HTML dashboard (only if enabled)
 	if cfg.HTML.Enabled {

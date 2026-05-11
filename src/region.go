@@ -44,19 +44,39 @@ func regionMatch(targetRegion, clientRegion string) bool {
 	return false
 }
 
+// regionDistance returns number of hops from clientRegion up to targetRegion.
+// A smaller value means a closer match; non-matching regions return a large value.
+func regionDistance(targetRegion, clientRegion string) int {
+	if targetRegion == "" || targetRegion == "default" || targetRegion == "global" {
+		return 0
+	}
+	dist := 0
+	r := clientRegion
+	for r != "" {
+		if r == targetRegion {
+			return dist
+		}
+		r = getParentRegion(r)
+		dist++
+	}
+	return 1 << 30
+}
+
 func selectClientForRegion(region string) *ClientInfo {
 	regionToTry := region
 	for {
 		candidates := filterClientsByRegion(regionToTry)
 		if len(candidates) > 0 {
-			return selectBestClient(candidates)
+			if best := selectBestClient(regionToTry, candidates); best != nil {
+				return best
+			}
 		}
 		if regionToTry == "" || regionToTry == "default" || regionToTry == "global" {
 			break
 		}
 		regionToTry = getParentRegion(regionToTry)
 	}
-	return selectBestClient(getAllValidClients())
+	return selectBestClient(region, getAllValidClients())
 }
 
 // Utility to list all valid clients

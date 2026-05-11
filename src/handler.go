@@ -52,10 +52,12 @@ func monitorHandler(w http.ResponseWriter, r *http.Request) {
 // @Router       /api/clients [get]
 func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 	type ClientTableRow struct {
-		NodeID    string   `json:"node_id"`
-		Protocol  Protocol `json:"protocol"`
-		LastSeen  string   `json:"last_seen"`
-		Connected string   `json:"connected"`
+		NodeID     string   `json:"node_id"`
+		Protocol   Protocol `json:"protocol"`
+		LastSeen   string   `json:"last_seen"`
+		Connected  string   `json:"connected"`
+		ActiveJobs int      `json:"active_jobs"`
+		Health     string   `json:"health"`
 	}
 
 	// snapshot clients under lock
@@ -66,6 +68,7 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	clientsMutex.RUnlock()
 
+	now := time.Now()
 	var rows []ClientTableRow
 	for _, client := range snapshot {
 		client.Mutex.Lock()
@@ -73,11 +76,19 @@ func clientsTableHandler(w http.ResponseWriter, r *http.Request) {
 		if !client.Valid {
 			status = "disconnected"
 		}
+		health := "healthy"
+		if !client.Valid {
+			health = "disconnected"
+		} else if !isClientHealthyAt(client.Valid, client.LastSeen, client.UnresponsiveUntil, now) {
+			health = "unresponsive"
+		}
 		rows = append(rows, ClientTableRow{
-			NodeID:    client.NodeID,
-			Protocol:  client.Protocol,
-			LastSeen:  client.LastSeen.Format(time.RFC3339),
-			Connected: status,
+			NodeID:     client.NodeID,
+			Protocol:   client.Protocol,
+			LastSeen:   client.LastSeen.Format(time.RFC3339),
+			Connected:  status,
+			ActiveJobs: client.ActiveJobs,
+			Health:     health,
 		})
 		client.Mutex.Unlock()
 	}

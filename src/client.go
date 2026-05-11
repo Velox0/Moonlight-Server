@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"net"
 	"net/http"
 	"sync"
@@ -18,6 +17,12 @@ var (
 	clientsMutex  sync.RWMutex
 	nodeIDCounter int = 1
 	nodeIDMutex   sync.Mutex
+)
+
+const (
+	clientStaleAfter   = 90 * time.Second
+	failureBackoffBase = 5 * time.Second
+	failureBackoffMax  = 2 * time.Minute
 )
 
 // Generate a client key
@@ -112,6 +117,8 @@ func clientHeartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	client.Mutex.Lock()
 	client.LastSeen = time.Now()
+	client.ConsecutiveFailures = 0
+	client.UnresponsiveUntil = time.Time{}
 	client.Mutex.Unlock()
 	clientsMutex.Unlock()
 
@@ -132,23 +139,109 @@ func validToken(token string) bool {
 	return false
 }
 
+func isClientHealthyAt(valid bool, lastSeen time.Time, unresponsiveUntil time.Time, now time.Time) bool {
+	if !valid {
+		return false
+	}
+	if !unresponsiveUntil.IsZero() && now.Before(unresponsiveUntil) {
+		return false
+	}
+	if !lastSeen.IsZero() && now.Sub(lastSeen) > clientStaleAfter {
+		return false
+	}
+	return true
+}
+
+func markClientFailure(client *ClientInfo) {
+	if client == nil {
+		return
+	}
+	now := time.Now()
+	client.Mutex.Lock()
+	client.ConsecutiveFailures++
+	client.LastFailure = now
+	step := client.ConsecutiveFailures - 1
+	if step < 0 {
+		step = 0
+	}
+	if step > 6 {
+		step = 6
+	}
+	backoff := failureBackoffBase * time.Duration(1<<uint(step))
+	if backoff > failureBackoffMax {
+		backoff = failureBackoffMax
+	}
+	client.UnresponsiveUntil = now.Add(backoff)
+	client.Mutex.Unlock()
+}
+
+func markClientSuccess(client *ClientInfo) {
+	if client == nil {
+		return
+	}
+	client.Mutex.Lock()
+	client.ConsecutiveFailures = 0
+	client.LastFailure = time.Time{}
+	client.UnresponsiveUntil = time.Time{}
+	client.Mutex.Unlock()
+}
+
+func findClientByEndpoint(ip string, port int) *ClientInfo {
+	clientsMutex.RLock()
+	defer clientsMutex.RUnlock()
+	for _, client := range clients {
+		client.Mutex.Lock()
+		match := client.IP == ip && client.Port == port && client.Valid
+		client.Mutex.Unlock()
+		if match {
+			return client
+		}
+	}
+	return nil
+}
+
 // Client selection (load balancing)
-func selectBestClient(candidates []*ClientInfo) *ClientInfo {
+func selectBestClient(targetRegion string, candidates []*ClientInfo) *ClientInfo {
 	if len(candidates) == 0 {
 		return nil
 	}
-	best := candidates[0]
-	bestScore := math.MaxFloat64
+	now := time.Now()
+	var best *ClientInfo
+	var bestJobs int
+	var bestDist int
+	var bestSeen time.Duration
+	var bestLatency time.Duration
 	for _, c := range candidates {
 		c.Mutex.Lock()
-		t := time.Since(c.LastSeen).Seconds()
-		lat := c.AvgLatency.Seconds()
-		score := t + lat
-		if score < bestScore {
-			best = c
-			bestScore = score
-		}
+		valid := c.Valid
+		lastSeen := c.LastSeen
+		latency := c.AvgLatency
+		jobs := c.ActiveJobs
+		region := c.Region
+		unresponsiveUntil := c.UnresponsiveUntil
 		c.Mutex.Unlock()
+
+		if !isClientHealthyAt(valid, lastSeen, unresponsiveUntil, now) {
+			continue
+		}
+
+		dist := regionDistance(targetRegion, region)
+		seenAge := now.Sub(lastSeen)
+		if lastSeen.IsZero() {
+			seenAge = time.Duration(1<<63 - 1)
+		}
+
+		if best == nil ||
+			jobs < bestJobs ||
+			(jobs == bestJobs && dist < bestDist) ||
+			(jobs == bestJobs && dist == bestDist && seenAge < bestSeen) ||
+			(jobs == bestJobs && dist == bestDist && seenAge == bestSeen && latency < bestLatency) {
+			best = c
+			bestJobs = jobs
+			bestDist = dist
+			bestSeen = seenAge
+			bestLatency = latency
+		}
 	}
 	return best
 }

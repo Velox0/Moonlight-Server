@@ -8,7 +8,6 @@ import (
 )
 
 // MonitorData defines the JSON output of /monitor
-// @Description Server metrics and statistics
 type MonitorData struct {
 	HumanMemoryAlloc  string `json:"human_memory_alloc_bytes" example:"2.5 MB"`
 	HumanTotalAlloc   string `json:"human_total_alloc_bytes" example:"10.3 MB"`
@@ -38,7 +37,7 @@ type HeartbeatRequest struct {
 // TaskRequest payload for POST /api/request
 type TaskRequest struct {
 	Region  string                 `json:"region" example:"us-west"`
-	Payload map[string]interface{} `json:"payload" swaggertype:"object"`
+	Payload map[string]interface{} `json:"payload"`
 }
 
 // HeartbeatResponse server response to heartbeat
@@ -80,10 +79,12 @@ type ErrorResponse struct {
 
 // ClientTableRow client status row
 type ClientTableRow struct {
-	NodeID    string `json:"node_id" example:"client-001"`
-	Protocol  string `json:"protocol" example:"http"`
-	LastSeen  string `json:"last_seen" example:"2025-04-19T10:35:22Z"`
-	Connected string `json:"connected" example:"connected"`
+	NodeID     string `json:"node_id" example:"client-001"`
+	Protocol   string `json:"protocol" example:"http"`
+	LastSeen   string `json:"last_seen" example:"2025-04-19T10:35:22Z"`
+	Connected  string `json:"connected" example:"connected"`
+	ActiveJobs int    `json:"active_jobs" example:"2"`
+	Health     string `json:"health" example:"healthy"`
 }
 
 // RegionListResponse regions list response
@@ -107,6 +108,16 @@ type P2PTaskResponse struct {
 	Region     string          `json:"region" example:"us-east-1"`
 	Peer       P2PPeerEndpoint `json:"peer"`
 	TTLSeconds int             `json:"ttl_seconds" example:"30"`
+}
+
+// P2PQUICTaskResponse is returned by /api/request/quic for direct QUIC client-to-client execution.
+type P2PQUICTaskResponse struct {
+	Mode       string          `json:"mode" example:"p2p-quic"`
+	TaskID     string          `json:"task_id" example:"abc123"`
+	Region     string          `json:"region" example:"us-east-1"`
+	Peer       P2PPeerEndpoint `json:"peer"`
+	TTLSeconds int             `json:"ttl_seconds" example:"30"`
+	Deadline   int64           `json:"deadline_unix_nanos" example:"1700000000000000000"`
 }
 
 type Client struct {
@@ -193,14 +204,19 @@ type WebSocketErrorResponse struct {
 }
 
 type ClientInfo struct {
-	IP         string
-	NodeID     string
-	Token      string
-	Region     string
-	Port       int
-	LastSeen   time.Time
-	AvgLatency time.Duration
-	Valid      bool
-	Protocol   Protocol
-	Mutex      sync.Mutex
+	IP                  string
+	NodeID              string
+	Token               string
+	Region              string
+	Port                int
+	LastSeen            time.Time
+	AvgLatency          time.Duration
+	ActiveJobs          int
+	LastAssigned        time.Time
+	LastFailure         time.Time
+	ConsecutiveFailures int
+	UnresponsiveUntil   time.Time
+	Valid               bool
+	Protocol            Protocol
+	Mutex               sync.Mutex
 }
